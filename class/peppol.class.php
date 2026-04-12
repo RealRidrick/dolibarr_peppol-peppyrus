@@ -682,8 +682,14 @@ class Peppol
 					}
 				}
 			} else {
-				$subprice = abs($subprice);
-				$qty = abs($qty);
+				// Fix BR-27: BT-146 (Item net price) shall NOT be negative
+				// Dolibarr credit notes have negative subprice + positive qty
+				// PEPPOL requires positive price + negative quantity
+				if ($unitPrice < 0) {
+					$unitPrice = abs($unitPrice);
+					$qty = -abs($qty);
+				}
+				$subprice = round($unitPrice * $qty, 2);
 			}
 
 			// print "<p>Ajout d'une ligne : $qty, $subprice</p>";

@@ -206,6 +206,11 @@ When ready to go live:
 
 # Changelog
 
+## Version 2.2.3
+- Fix: BR-27 - Credit notes failed PEPPOL validation because BT-146 (Item net price) was negative
+- Fix: Dolibarr credit note lines have negative unit price + positive qty; now normalized to positive price + negative qty as required by EN 16931
+- Thanks to @IveWe for reporting this issue (#2)
+
 ## Version 2.2.2
 - Fix: BR-CL-10 - Removed seller PartyIdentification with invalid schemeID (9925 is EAS, not ICD)
 - Fix: PartyIdentification requires ICD codes, VAT scheme codes (99xx) are only valid for EndpointID
