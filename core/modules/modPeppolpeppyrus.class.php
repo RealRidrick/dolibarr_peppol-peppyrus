@@ -118,6 +118,8 @@ class modPeppolpeppyrus extends DolibarrModules
 			),
 			// Set this to 1 if features of module are opened to external users
 			'moduleforexternal' => 0,
+			// Data directory per entity: DOL_DATA_ROOT/peppol (entity 1) or DOL_DATA_ROOT/<entity>/peppol
+			'dir' => array('output' => 'peppol'),
 		);
 
 		// Data directories to create when module is enabled.

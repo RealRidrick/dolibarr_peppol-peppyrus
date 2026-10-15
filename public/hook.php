@@ -59,6 +59,15 @@ if (!$res) {
 	exit('Include of main fails');
 }
 
+
+/**
+ * @var \Conf $conf
+ * @var \DoliDB $db
+ * @var \HookManager $hookmanager
+ * @var \Societe $mysoc
+ * @var \Translate $langs
+ * @var \User $user
+ */
 require_once DOL_DOCUMENT_ROOT . '/core/lib/functions2.lib.php';
 dol_include_once('/peppolpeppyrus/class/peppolimport.class.php');
 dol_include_once('/peppolpeppyrus/lib/peppol.lib.php');
@@ -194,6 +203,12 @@ function handleInboundDocument($db, $headers, $xml)
 
 	dol_syslog("Peppol webhook - New inbound document: $documentId from $senderId", LOG_INFO);
 
+	// Multicompany: the entity comes from the URL, so check the document is addressed to the Peppol ID of this entity
+	if (!peppolWebhookReceiverMatches($receiverId)) {
+		dol_syslog("Peppol webhook - Document $documentId is addressed to $receiverId, not to the Peppol ID of entity " . ((int) $conf->entity) . ", refused", LOG_ERR);
+		throw new \Exception("Receiver does not match this entity");
+	}
+
 	// Check if document already exists
 	$pi = new Peppolimport($db);
 
@@ -264,6 +279,35 @@ function handleInboundDocument($db, $headers, $xml)
 		dol_syslog("Peppol webhook - Error creating Peppolimport for document $documentId", LOG_ERR);
 		throw new \Exception("Failed to create Peppolimport");
 	}
+}
+
+/**
+ * Check that a receiver Peppol ID is the Peppol ID configured for the current entity (PEPPOL_AP_SENDER_ID).
+ * Accepted forms: "0208:0123456789" or "iso6523-actorid-upis::0208:0123456789"; comparison is case-insensitive.
+ * Without Multicompany an unknown own ID or an empty receiver is accepted (only one company can be meant).
+ *
+ * @param	string	$receiverId		Receiver ID from the webhook headers
+ * @return	bool
+ */
+function peppolWebhookReceiverMatches($receiverId)
+{
+	$own = getDolGlobalString('PEPPOL_AP_SENDER_ID');
+	$multicompany = isModEnabled('multicompany');
+	if ($own === '' || $receiverId === '') {
+		return !$multicompany;
+	}
+	$normalize = function ($id) {
+		$id = strtoupper(trim(preg_replace('/^.*::/', '', (string) $id)));
+		$parts = explode(':', $id);
+		$value = array_pop($parts);
+		return array('scheme' => (count($parts) ? end($parts) : ''), 'value' => preg_replace('/[^A-Z0-9]/', '', $value));
+	};
+	$a = $normalize($own);
+	$b = $normalize($receiverId);
+	if ($a['value'] === '' || $a['value'] !== $b['value']) {
+		return false;
+	}
+	return ($a['scheme'] === '' || $b['scheme'] === '' || $a['scheme'] === $b['scheme']);
 }
 
 /**

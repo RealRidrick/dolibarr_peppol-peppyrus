@@ -128,7 +128,7 @@ class ActionsPeppolpeppyrus
 				$destdir = stripslashes($parameters['diroutputmassaction']);
 				if (!is_dir($destdir)) {
 					dol_syslog(get_class($this) . '::doMassActions make directory ' . $destdir);
-					mkdir($destdir, 0700, true);
+					dol_mkdir($destdir);
 				}
 				$zipname = $destdir . '/archive-peppol.zip';
 				$zip = new ZipArchive();
@@ -387,7 +387,7 @@ class ActionsPeppolpeppyrus
 			$keytoavoidconflict = empty($parameters['trackid']) ? '' : '-' . $parameters['trackid'];
 		}
 
-		if ((GETPOST('action', 'aZ09') == 'presend' && GETPOST('mode') == 'init') || (GETPOST('modelmailselected', 'int') && ! GETPOST('removedfile', 'alpha'))) {
+		if ((GETPOST('action', 'aZ09') == 'presend' && GETPOST('mode', 'aZ09') == 'init') || (GETPOST('modelmailselected', 'int') && ! GETPOST('removedfile', 'alpha'))) {
 			$listofpaths = (! empty($_SESSION["listofpaths" . $keytoavoidconflict])) ? explode(';', $_SESSION["listofpaths" . $keytoavoidconflict]) : array();
 			$listofnames = (! empty($_SESSION["listofnames" . $keytoavoidconflict])) ? explode(';', $_SESSION["listofnames" . $keytoavoidconflict]) : array();
 			$listofmimes = (! empty($_SESSION["listofmimes" . $keytoavoidconflict])) ? explode(';', $_SESSION["listofmimes" . $keytoavoidconflict]) : array();

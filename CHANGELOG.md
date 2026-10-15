@@ -15,6 +15,10 @@ Security (internal guideline for custom modules):
 - Connections to Peppyrus and the Peppol directory are limited to HTTPS.
 - Pages check that the module is enabled and the read right (`index.php`, `peppol_tab.php`, `peppolimport_card.php`); `analyze` and `refresh` require the write right and a token.
 - Removed `myobject_contact.php` (template leftover that referred to a non-existing class).
+- Imported Peppol files are stored per entity: `DOL_DATA_ROOT/peppol` for entity 1 (unchanged, no files move) and `DOL_DATA_ROOT/<entity>/peppol` for other entities (`module_parts['dir']`).
+- The webhook only accepts an inbound document addressed to the Peppol ID of the entity in the URL (`PEPPOL_AP_SENDER_ID`); with Multicompany enabled, that ID must be configured.
+- The PDF of an import is downloaded through `document.php?modulepart=peppolpeppyrus` with the module read right; the module no longer creates public share links for it.
+- All `GETPOST` calls have a type; `@var` declarations for globals on all pages; `dol_mkdir()` instead of `mkdir()`.
 
 Fixes:
 
@@ -22,5 +26,7 @@ Fixes:
 - `peppolAddLog()` produced invalid SQL, so nothing was logged; fixed, with an `entity` column.
 - Reference numbering of imports used an undefined variable and never filtered on entity.
 - `$conf->global` replaced by `getDolGlobalString()` / `getDolGlobalInt()`.
+- `fileExist()` of an import was empty, so the mass action "analyze" reported every file as missing.
+- Renaming an import from its provisional ref used a wrong directory and index path.
 
 Requirements: Dolibarr 24, PHP 8.1.

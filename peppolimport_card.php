@@ -62,6 +62,15 @@ if (!$res) {
 	die("Include of main fails");
 }
 
+
+/**
+ * @var Conf $conf
+ * @var DoliDB $db
+ * @var HookManager $hookmanager
+ * @var Societe $mysoc
+ * @var Translate $langs
+ * @var User $user
+ */
 require_once DOL_DOCUMENT_ROOT . '/core/class/html.formcompany.class.php';
 require_once DOL_DOCUMENT_ROOT . '/core/class/html.formfile.class.php';
 require_once DOL_DOCUMENT_ROOT . '/core/class/html.formprojet.class.php';
@@ -429,7 +438,7 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 
 	print '<tr><td colspan="2">';
 
-	$tmpout .= DOL_URL_ROOT.'/document.php?modulepart=peppol&amp;entity='.$entity.'&amp;file='.urlencode(dol_sanitizeFileName($object->ref).'/'.dol_sanitizeFileName($object->peppolid) . ".pdf");
+	$tmpout = DOL_URL_ROOT.'/document.php?modulepart=peppolpeppyrus&amp;entity='.((int) $object->entity).'&amp;file='.urlencode(dol_sanitizeFileName($object->ref).'/'.dol_sanitizeFileName($object->peppolid) . ".pdf");
 	print "<object data=\"" .  $tmpout . "\" type=\"application/pdf\" style=\"min-width: 40vw; min-height: 80vh;\">\n";
 
 	// print '<textarea id="txtXml" rows="25" cols="80" readonly="readonly" style="border:none;">';
@@ -500,16 +509,10 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 			// 	print dolGetButtonAction($langs->trans('SendMail'), '', 'default', $_SERVER["PHP_SELF"].'?id='.$object->id.'&action=presend&mode=init#formmailbeforetitle');
 			// }
 
-			$pdffile = basename(str_replace(".xml", ".pdf", $object->fullFilename()));
-			$ecmfile = new \EcmFiles($db);
-			$result = $ecmfile->fetch(0, '', 'peppol/' . $pdffile, '', '', 'peppol_peppolimport', $object->id);
-			if ($result) {
-				$url = DOL_URL_ROOT . '/document.php?token=' . newToken() . '?modulepart=peppol&file=' . $pdffile;
-				if (empty($ecmfile->share)) {
-					$ecmfile->share = getRandomPassword(true);
-					$ecmfile->update($user);
-				}
-				$url .= "&hashp=" . $ecmfile->share;
+			// Download through document.php with the module read right (no public share link)
+			$pdffullname = str_replace(".xml", ".pdf", $object->fullFilename());
+			if ($pdffullname !== '' && dol_is_file($pdffullname)) {
+				$url = DOL_URL_ROOT . '/document.php?modulepart=peppolpeppyrus&entity=' . ((int) $object->entity) . '&file=' . urlencode(dol_sanitizeFileName($object->ref) . '/' . basename($pdffullname));
 				print dolGetButtonAction($langs->trans('PeppolDownloadPDF'), '', 'default', $url);
 			}
 
@@ -580,7 +583,7 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 
 
 	// Select mail models is same action as presend
-	if (GETPOST('modelselected')) {
+	if (GETPOST('modelselected', 'alpha')) {
 		$action = 'presend';
 	}
 
@@ -594,9 +597,9 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 			$objref = dol_sanitizeFileName($object->ref);
 			$objpeppol = dol_sanitizeFileName($object->peppolid);
 			$relativepath = $objref . '/' . $objpeppol . '%';
-			$filedir = DOL_DATA_ROOT . '/peppol/' . dol_sanitizeFileName($object->ref);
+			$filedir = $object->getFileDir();
 			$urlsource = $_SERVER["PHP_SELF"] . "?id=" . $object->id;
-			print $formfile->showdocuments('peppol', $objref, $filedir, $urlsource, 0, 0, '', 1, 0, 0, 28, 0, '', '', '', $langs->defaultlang);
+			print $formfile->showdocuments('peppolpeppyrus', $objref, $filedir, $urlsource, 0, 0, '', 1, 0, 0, 28, 0, '', '', '', $langs->defaultlang);
 
 		// Show links to link elements
 		$linktoelem = $form->showLinkToObjectBlock($object, null, array('peppolimport'));
@@ -620,7 +623,7 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 	}
 
 	//Select mail models is same action as presend
-	if (GETPOST('modelselected')) {
+	if (GETPOST('modelselected', 'alpha')) {
 		$action = 'presend';
 	}
 
