@@ -29,6 +29,7 @@ PeppolAboutPage = Elektronisches Rechnungsmodul Peppol
 PeppolMassActionZip = ZIP mit allen Peppol-Dateien erstellen
 PeppolError = Peppol-Fehler:
 BuyerDoesNotHaveVATDetails = Die innergemeinschaftliche USt-IdNr. ist erforderlich, um ein Dokument gemäß Peppol-Standard zu erstellen
+BuyerDoesNotHaveEmailOrPeppolID = Der Kunde hat weder eine Peppol-ID noch eine USt-IdNr. noch eine E-Mail-Adresse. Bitte mindestens eine dieser Angaben beim Geschäftspartner hinterlegen, um ein Peppol-Dokument zu erstellen.
 PeppolWarning = Peppol-Hinweis:
 BuyerDoesNotHaveVATDetailsForce = Da für diesen Kunden keine USt-IdNr. vorliegt, verwendet die generierte XML-Datei den speziellen USt-Code '00000000', entspricht aber nicht dem Peppol-Standard.
 InvoiceDoesNotHaveBankAccountLinked = Ihre Rechnung hat kein verknüpftes Bankkonto, sodass Ihr Kunde nicht über die Zahlungsinformationen verfügt

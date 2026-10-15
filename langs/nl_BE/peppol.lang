@@ -28,6 +28,7 @@ PeppolAboutPage = Module voor elektronische facturatie Peppol
 PeppolMassActionZip = Maak een ZIP-bestand met alle Peppol-bestanden
 PeppolError = Peppol-fout:
 BuyerDoesNotHaveVATDetails = Het btw-nummer is vereist om een Peppol-conform document te maken.
+BuyerDoesNotHaveEmailOrPeppolID = De klant heeft geen Peppol-ID, geen btw-nummer en geen e-mailadres. Vul minstens één hiervan in bij de relatie om een Peppol-document te maken.
 PeppolWarning = Peppol-opmerking:
 BuyerDoesNotHaveVATDetailsForce = Als er geen btw-nummer is voor deze klant, gebruikt het gegenereerde XML-bestand de speciale btw-code '00000000', maar dit is niet Peppol-conform.
 InvoiceDoesNotHaveBankAccountLinked = Je factuur heeft geen gekoppelde bankrekening, waardoor de klant niet beschikt over de informatie die nodig is om te betalen.

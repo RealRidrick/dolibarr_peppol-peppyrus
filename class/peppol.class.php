@@ -433,7 +433,13 @@ class Peppol
 				} else {
 					dol_syslog("Buyer does not have a VAT number, but is a private people or non vat aware organisation", LOG_WARNING);
 					$buyerVAT = null;
-					$buyer->setElectronicAddress(new Identifier($objFacture->thirdparty->email, '0007'));
+					$buyerEmail = trim((string) ($objFacture->thirdparty->email ?? ''));
+					if (empty($buyerEmail)) {
+						dol_syslog("Buyer has no Peppol ID, no VAT number and no email address, Peppol export disabled", LOG_WARNING);
+						setEventMessages($langs->trans("PeppolError"), array($langs->trans("BuyerDoesNotHaveEmailOrPeppolID")), 'warnings');
+						return -1;
+					}
+					$buyer->setElectronicAddress(new Identifier($buyerEmail, '0007'));
 				}
 				dol_syslog("peppol Identifier stay empty");
 			}

@@ -28,6 +28,7 @@ PeppolAboutPage = Peppol electronic invoicing module
 PeppolMassActionZip = Create a ZIP with all Peppol files
 PeppolError = Peppol error:
 BuyerDoesNotHaveVATDetails = The VAT number is required to create a Peppol-compliant document.
+BuyerDoesNotHaveEmailOrPeppolID = The customer has no Peppol ID, no VAT number and no email address. Fill in at least one of these on the third party to create a Peppol document.
 PeppolWarning = Peppol note:
 BuyerDoesNotHaveVATDetailsForce = In the absence of a VAT number for this customer, the XML file generated uses the special VAT code '00000000' but is not Peppol-compliant.
 InvoiceDoesNotHaveBankAccountLinked = Your invoice doesn't have a linked bank account, so your customer won't have the information needed to pay you.

@@ -28,6 +28,7 @@ PeppolAboutPage=Página sobre Peppol
 PeppolMassActionZip=Crear un ZIP con todos los archivos Peppol
 PeppolError=Error de Peppol:
 BuyerDoesNotHaveVATDetails=El número de IVA intracomunitario es necesario para elaborar un documento conforme a Peppol
+BuyerDoesNotHaveEmailOrPeppolID=El cliente no tiene identificador Peppol, ni número de IVA, ni dirección de correo electrónico. Indique al menos uno de ellos en el tercero para crear un documento Peppol.
 PeppolWarning=Nota Peppol:
 BuyerDoesNotHaveVATDetailsForce=En ausencia de un número de IVA para este cliente, el archivo XML generado utiliza el código de IVA especial "00000000", pero no es compatible con Peppol.
 PEPPOL_CONFIG=Configuración general de los clientes que no tienen número de IVA
