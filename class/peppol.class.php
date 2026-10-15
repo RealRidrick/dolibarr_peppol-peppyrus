@@ -140,20 +140,27 @@ class Peppol
 			dol_syslog("peppol:: makePDF thirdpart tva_assuj=" . $objFacture->thirdparty->tva_assuj);
 		}
 
-		if ($objFacture->thirdparty->typent_code == 'TE_PRIVATE') {
-			dol_syslog("peppol:: makePDF for a private people : " . $objFacture->thirdparty->typent_code);
+		// Private customers are not on the Peppol network: skip silently (no message), the PDF is made as usual.
+		// A customer counts as private when its third party type is "Private individual" (TE_PRIVATE), or when no
+		// type is set and it has neither a Peppol ID nor a VAT number. A business type without these details keeps the warnings.
+		if (empty($objFacture->thirdparty->array_options) || !array_key_exists('options_peppol_id', $objFacture->thirdparty->array_options)) {
+			$objFacture->thirdparty->fetch_optionals();
+		}
+		$typentcode = (string) ($objFacture->thirdparty->typent_code ?? '');
+		$hasPeppolId = !empty($objFacture->thirdparty->array_options['options_peppol_id']);
+		$hasVatNumber = trim((string) ($objFacture->thirdparty->tva_intra ?? '')) !== '';
+		$isPrivate = ($typentcode == 'TE_PRIVATE') || (in_array($typentcode, array('', 'TE_UNKNOWN')) && !$hasPeppolId && !$hasVatNumber);
+		if ($isPrivate) {
+			dol_syslog("peppol:: makePDF for a private customer, typent_code=" . $typentcode);
 			$enableVatForThatInvoice = false;
 			if (getDolGlobalString('PEPPOL_FORCE_XML_WITH_VATNULL')) {
-				dol_syslog("peppol:: makePDF for a private people but PEPPOL_FORCE_XML_WITH_VATNULL is set, continue");
+				dol_syslog("peppol:: makePDF for a private customer but PEPPOL_FORCE_XML_WITH_VATNULL is set, continue");
 			} else {
-				dol_syslog("peppol:: makePDF for a private people -> no xml output", LOG_INFO);
-				$this->error = $langs->trans("PeppolErrorPrivateCustomer");
-				$this->errors[] = $langs->trans("PeppolErrorPrivateCustomer");
-				setEventMessages($langs->trans("PeppolErrorPrivateCustomer"), null, 'warnings');
-				return -3;
+				dol_syslog("peppol:: makePDF for a private customer -> no xml output, no message", LOG_INFO);
+				return 0;
 			}
 		} else {
-			dol_syslog("peppol:: makePDF for a typent_code=" . $objFacture->thirdparty->typent_code);
+			dol_syslog("peppol:: makePDF for a typent_code=" . $typentcode);
 		}
 
 		$baseErrors = [];
