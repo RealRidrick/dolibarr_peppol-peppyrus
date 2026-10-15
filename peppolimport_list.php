@@ -240,7 +240,10 @@ if (!GETPOST('confirmmassaction', 'alpha') && $massaction != 'presend' && $massa
 	$massaction = '';
 }
 
-if($action == "refresh") {
+if ($action == "refresh") {
+	if (!$user->hasRight('peppolpeppyrus', 'write') || !peppolCheckToken()) {
+		accessforbidden();
+	}
 	peppolGetSupplierInvoicesList();
 }
 

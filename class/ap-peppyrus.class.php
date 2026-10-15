@@ -10,6 +10,7 @@
 namespace custom\peppolpeppyrus;
 
 require_once 'peppolap.class.php';
+require_once __DIR__ . '/../lib/peppol.lib.php';
 
 /**
  * Class Peppyrus
@@ -32,11 +33,11 @@ class Peppyrus extends PeppolAP
 		$isProd = getDolGlobalString('PEPPOL_PROD', '0') == '1';
 
 		if ($isProd) {
-			return getDolGlobalString('PEPPOL_AP_API_KEY', '');
+			return peppolGetApiKey('PEPPOL_AP_API_KEY');
 		} else {
 			// Use DEV key if available, fallback to PROD key for backward compatibility
-			$devKey = getDolGlobalString('PEPPOL_AP_API_KEY_DEV', '');
-			return !empty($devKey) ? $devKey : getDolGlobalString('PEPPOL_AP_API_KEY', '');
+			$devKey = peppolGetApiKey('PEPPOL_AP_DEV_API_KEY');
+			return !empty($devKey) ? $devKey : peppolGetApiKey('PEPPOL_AP_API_KEY');
 		}
 	}
 
@@ -51,7 +52,7 @@ class Peppyrus extends PeppolAP
 		$isProd = getDolGlobalString('PEPPOL_PROD', '0') == '1';
 
 		if (empty($apiKey)) {
-			$keyName = $isProd ? 'PEPPOL_AP_API_KEY' : 'PEPPOL_AP_API_KEY_DEV';
+			$keyName = $isProd ? 'PEPPOL_AP_API_KEY' : 'PEPPOL_AP_DEV_API_KEY';
 			dol_syslog("Peppyrus::validateConfiguration Missing API key for " . ($isProd ? 'PROD' : 'DEV') . " mode", LOG_ERR);
 			$this->errors[] = "Missing API key configuration (" . $keyName . ")";
 			return -1;
@@ -290,7 +291,7 @@ class Peppyrus extends PeppolAP
 		$headers = [];
 		$headers[] = 'X-Api-Key: ' . $apiKey;
 
-		$result = getURLContent($url, 'GET', '', 1, $headers);
+		$result = getURLContent($url, 'GET', '', 1, $headers, array('https'));
 
 		dol_syslog("Peppyrus::checkAccessPoint CURL result is " . json_encode($result));
 
@@ -406,7 +407,7 @@ class Peppyrus extends PeppolAP
 
 		$body = json_encode($data);
 
-		$result = getURLContent($url, 'POST', $body, 1, $headers);
+		$result = getURLContent($url, 'POST', $body, 1, $headers, array('https'));
 
 		dol_syslog("Peppyrus::sendToAccessPoint CURL result is " . json_encode($result));
 
@@ -484,7 +485,7 @@ class Peppyrus extends PeppolAP
 		$headers = [];
 		$headers[] = 'X-Api-Key: ' . $apiKey;
 
-		$result = getURLContent($url, 'GET', '', 1, $headers);
+		$result = getURLContent($url, 'GET', '', 1, $headers, array('https'));
 
 		dol_syslog("Peppyrus::checkThirdparty CURL result is " . json_encode($result));
 
@@ -546,7 +547,7 @@ class Peppyrus extends PeppolAP
 		$headers = [];
 		$headers[] = 'X-Api-Key: ' . $apiKey;
 
-		$result = getURLContent($url, 'GET', '', 1, $headers);
+		$result = getURLContent($url, 'GET', '', 1, $headers, array('https'));
 
 		dol_syslog("Peppyrus::getSupplierInvoicesList CURL result is " . json_encode($result));
 
@@ -643,7 +644,7 @@ class Peppyrus extends PeppolAP
 		$headers = [];
 		$headers[] = 'X-Api-Key: ' . $apiKey;
 
-		$result = getURLContent($url, 'GET', '', 1, $headers);
+		$result = getURLContent($url, 'GET', '', 1, $headers, array('https'));
 
 		dol_syslog("Peppyrus::getSupplierInvoice CURL result code: " . ($result['http_code'] ?? 'unknown'));
 
@@ -742,7 +743,7 @@ class Peppyrus extends PeppolAP
 		$headers = [];
 		$headers[] = 'X-Api-Key: ' . $apiKey;
 
-		$result = getURLContent($url, 'PATCH', '', 1, $headers);
+		$result = getURLContent($url, 'PATCH', '', 1, $headers, array('https'));
 
 		dol_syslog("Peppyrus::confirmSupplierInvoice CURL result is " . json_encode($result));
 
@@ -829,7 +830,7 @@ class Peppyrus extends PeppolAP
 		$headers = [];
 		$headers[] = 'X-Api-Key: ' . $apiKey;
 
-		$result = getURLContent($url, 'GET', '', 1, $headers);
+		$result = getURLContent($url, 'GET', '', 1, $headers, array('https'));
 
 		dol_syslog("Peppyrus::getMessageReport CURL result is " . json_encode($result));
 
@@ -881,7 +882,7 @@ class Peppyrus extends PeppolAP
 		$headers = [];
 		$headers[] = 'X-Api-Key: ' . $apiKey;
 
-		$result = getURLContent($url, 'GET', '', 1, $headers);
+		$result = getURLContent($url, 'GET', '', 1, $headers, array('https'));
 
 		dol_syslog("Peppyrus::findPeppolIdByVat CURL result is " . json_encode($result));
 
@@ -939,7 +940,7 @@ class Peppyrus extends PeppolAP
 		$headers = [];
 		$headers[] = 'X-Api-Key: ' . $apiKey;
 
-		$result = getURLContent($url, 'GET', '', 1, $headers);
+		$result = getURLContent($url, 'GET', '', 1, $headers, array('https'));
 
 		dol_syslog("Peppyrus::searchPeppolDirectory CURL result is " . json_encode($result));
 
@@ -979,7 +980,7 @@ class Peppyrus extends PeppolAP
 		$headers = [];
 		$headers[] = 'X-Api-Key: ' . $apiKey;
 
-		$result = getURLContent($url, 'GET', '', 1, $headers);
+		$result = getURLContent($url, 'GET', '', 1, $headers, array('https'));
 
 		dol_syslog("Peppyrus::getOrganizationPeppolInfo CURL result is " . json_encode($result));
 

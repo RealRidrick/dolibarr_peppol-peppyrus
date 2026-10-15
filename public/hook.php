@@ -63,17 +63,30 @@ require_once DOL_DOCUMENT_ROOT . '/core/lib/functions2.lib.php';
 dol_include_once('/peppolpeppyrus/class/peppolimport.class.php');
 dol_include_once('/peppolpeppyrus/lib/peppol.lib.php');
 
+header('Content-Type: application/json');
+
+if (!isModEnabled('peppolpeppyrus')) {
+	http_response_code(404);
+	echo json_encode(['error' => 'Not available']);
+	exit;
+}
+
 // Get raw POST data
 $rawPayload = file_get_contents('php://input');
-$headers = getallheaders();
+// HTTP header names are case-insensitive: normalize to lower case
+$headers = array_change_key_case(function_exists('getallheaders') ? (array) getallheaders() : array(), CASE_LOWER);
 
-dol_syslog('Peppol webhook received - Headers: ' . json_encode($headers), LOG_DEBUG);
 dol_syslog('Peppol webhook received - Payload length: ' . strlen($rawPayload), LOG_DEBUG);
 
-// Verify HMAC signature
+// Verify HMAC signature. Without a configured secret key the webhook refuses every request.
 $secretKey = getDolGlobalString('PEPPOL_AP_WEBHOOK_KEY');
-if (!empty($secretKey)) {
-	$hmacReceived = isset($headers['x-scrada-hmac-sha256']) ? $headers['x-scrada-hmac-sha256'] : '';
+if (empty($secretKey)) {
+	dol_syslog('Peppol webhook refused: no secret key configured (PEPPOL_AP_WEBHOOK_KEY)', LOG_WARNING);
+	http_response_code(403);
+	echo json_encode(['error' => 'Webhook not configured']);
+	exit;
+} else {
+	$hmacReceived = isset($headers['x-scrada-hmac-sha256']) ? (string) $headers['x-scrada-hmac-sha256'] : '';
 
 	if (empty($hmacReceived)) {
 		dol_syslog('Peppol webhook error: No HMAC signature provided', LOG_ERR);
@@ -86,15 +99,12 @@ if (!empty($secretKey)) {
 
 	if (!hash_equals($hmacCalculated, $hmacReceived)) {
 		dol_syslog('Peppol webhook error: HMAC verification failed', LOG_ERR);
-		dol_syslog('Expected: ' . $hmacCalculated . ' Got: ' . $hmacReceived, LOG_DEBUG);
 		http_response_code(403);
 		echo json_encode(['error' => 'Invalid HMAC signature']);
 		exit;
 	}
 
 	dol_syslog('Peppol webhook: HMAC verification successful', LOG_DEBUG);
-} else {
-	dol_syslog('Peppol webhook warning: No secret key configured, skipping HMAC verification', LOG_WARNING);
 }
 
 // Extract webhook metadata from headers
@@ -146,7 +156,7 @@ try {
 } catch (\Exception $e) {
 	dol_syslog('Peppol webhook error: ' . $e->getMessage(), LOG_ERR);
 	http_response_code(500);
-	echo json_encode(['error' => $e->getMessage()]);
+	echo json_encode(['error' => 'Processing failed']);
 }
 
 /**
@@ -188,7 +198,11 @@ function handleInboundDocument($db, $headers, $xml)
 	$pi = new Peppolimport($db);
 
 	// Try to load by peppolid
-	$sql = "SELECT rowid FROM " . MAIN_DB_PREFIX . "peppol_import WHERE peppolid = '" . $db->escape($documentId) . "'";
+	if ($documentId === '') {
+		throw new \Exception("Missing document id");
+	}
+	$sql = "SELECT rowid FROM " . MAIN_DB_PREFIX . $pi->table_element . " WHERE peppolid = '" . $db->escape($documentId) . "'";
+	$sql .= " AND entity IN (" . getEntity($pi->element) . ")";
 	$resql = $db->query($sql);
 	if ($resql) {
 		if ($db->num_rows($resql) > 0) {
@@ -220,14 +234,17 @@ function handleInboundDocument($db, $headers, $xml)
 		'documentTypeValue' => $documentTypeValue,
 	]);
 
+	$db->begin();
+
 	$res = $pi->create($user);
 	if ($res > 0) {
 		$res = $pi->validate($user);
 
 		// Save XML content
-		$resSaveXml = $pi->saveXML($xml);
+		$resSaveXml = ($res > 0) ? $pi->saveXML($xml) : -1;
 
 		if ($resSaveXml > 0) {
+			$db->commit();
 			dol_syslog("Peppol webhook - Document $documentId saved successfully", LOG_INFO);
 
 			// Try to get PDF (optional, may not always be available immediately)
@@ -238,10 +255,12 @@ function handleInboundDocument($db, $headers, $xml)
 			//update pi->fk_supplier and pi->fk_invoice
 
 		} else {
-			dol_syslog("Peppol webhook - Error saving XML for document $documentId", LOG_ERR);
+			$db->rollback();
+			dol_syslog("Peppol webhook - Error validating or saving XML for document $documentId", LOG_ERR);
 			throw new \Exception("Failed to save XML document");
 		}
 	} else {
+		$db->rollback();
 		dol_syslog("Peppol webhook - Error creating Peppolimport for document $documentId", LOG_ERR);
 		throw new \Exception("Failed to create Peppolimport");
 	}

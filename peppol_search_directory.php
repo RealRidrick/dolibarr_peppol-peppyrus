@@ -61,8 +61,11 @@ $result = restrictedArea($user, 'peppolpeppyrus');
 // Load third party if socid is provided
 $thirdparty = null;
 if ($socid > 0) {
+	restrictedArea($user, 'societe', $socid, '&societe', '', 'fk_soc', 'rowid', 0);
 	$thirdparty = new Societe($db);
-	$thirdparty->fetch($socid);
+	if ($thirdparty->fetch($socid) <= 0) {
+		$thirdparty = null;
+	}
 }
 
 /*
@@ -98,7 +101,15 @@ if ($action == 'search') {
 }
 
 if ($action == 'select' && $socid > 0) {
-	$participantid = GETPOST('participantid', 'alpha');
+	// Changing the Peppol ID of a third party: needs write access to the module and to that third party, and a valid token
+	if (!peppolCheckToken()) {
+		accessforbidden($langs->trans('ErrorBadValueForParameter', 'token'));
+	}
+	if (empty($thirdparty) || !$user->hasRight('peppolpeppyrus', 'write') || !$user->hasRight('societe', 'creer')) {
+		accessforbidden();
+	}
+	restrictedArea($user, 'societe', $socid, '&societe', '', 'fk_soc', 'rowid', 0);
+	$participantid = GETPOST('participantid', 'alphanohtml');
 	if (!empty($participantid) && $thirdparty) {
 		$thirdparty->array_options['options_peppol_id'] = $participantid;
 		// Save extrafield - update() alone doesn't save extrafields in Dolibarr!

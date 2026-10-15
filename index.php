@@ -30,7 +30,9 @@ $action = GETPOST('action', 'aZ09');
 
 
 // Security check
-//if (! $user->rights->peppolpeppyrus->myobject->read) accessforbidden();
+if (!isModEnabled('peppolpeppyrus') || !$user->hasRight('peppolpeppyrus', 'read')) {
+	accessforbidden();
+}
 $socid = GETPOST('socid', 'int');
 if (isset($user->socid) && $user->socid > 0) {
 	$action = '';
@@ -140,8 +142,8 @@ END MODULEBUILDER DRAFT MYOBJECT */
 print '</div><div class="fichetwothirdright"><div class="ficheaddleft">';
 
 
-$NBMAX = $conf->global->MAIN_SIZE_SHORTLIST_LIMIT;
-$max = $conf->global->MAIN_SIZE_SHORTLIST_LIMIT;
+$NBMAX = getDolGlobalInt('MAIN_SIZE_SHORTLIST_LIMIT');
+$max = getDolGlobalInt('MAIN_SIZE_SHORTLIST_LIMIT');
 
 /* BEGIN MODULEBUILDER LASTMODIFIED MYOBJECT
 // Last modified myobject

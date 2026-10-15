@@ -104,7 +104,7 @@ class Peppol
 		//check module version vs last init version in database
 		if (isset($this->db)) {
 			$tmpmodule = new \modPeppolpeppyrus($this->db);
-			if ($tmpmodule->version != $conf->global->PEPPOL_MODULE_VERSION) {
+			if ($tmpmodule->version != getDolGlobalString('PEPPOL_MODULE_VERSION')) {
 				setEventMessages($langs->trans("ErrorPeppolModuleVersionDatabase"), null, 'errors');
 				// return -100;
 			}
@@ -582,7 +582,7 @@ class Peppol
 
 		//default bank account in global dolibarr settings ?
 		// Payment informations
-		$bankid = (($objFacture->fk_account > 0) ? $objFacture->fk_account : $conf->global->FACTURE_RIB_NUMBER);
+		$bankid = (($objFacture->fk_account > 0) ? $objFacture->fk_account : getDolGlobalInt('FACTURE_RIB_NUMBER'));
 		if (!empty($bankid)) {
 			$payment = new Payment();
 			$transfert = new Transfer();
@@ -1057,7 +1057,7 @@ class Peppol
 		];
 
 		// Use Dolibarr's getURLContent function
-		$result = getURLContent($url, 'GET', '', 1, $headers, array('http', 'https'), 0);
+		$result = getURLContent($url, 'GET', '', 1, $headers, array('https'), 0);
 
 		// Check for errors
 		if (empty($result['content'])) {

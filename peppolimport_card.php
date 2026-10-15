@@ -111,9 +111,9 @@ if (empty($action) && empty($id) && empty($ref)) {
 // Load object
 include DOL_DOCUMENT_ROOT . '/core/actions_fetchobject.inc.php'; // Must be include, not include_once.
 
-$permissiontoaccess = $user->rights->peppolpeppyrus->read;
-$permissiontoadd = $user->rights->peppolpeppyrus->write;
-$permissiontodelete = $user->rights->peppolpeppyrus->delete;
+$permissiontoaccess = $user->hasRight('peppolpeppyrus', 'read');
+$permissiontoadd = $user->hasRight('peppolpeppyrus', 'write');
+$permissiontodelete = $user->hasRight('peppolpeppyrus', 'delete');
 // Security check - Protection if external user
 /*
 Note: vérification des droits associés et nécessaires:
@@ -146,7 +146,7 @@ if ($user->socid > 0) {
 }
 $isdraft = (($object->statut == $object::STATUS_DRAFT) ? 1 : 0);
 //$result = restrictedArea($user, 'peppolpeppyrus', $id, '');
-if (empty($permissiontoaccess)) {
+if (!isModEnabled('peppolpeppyrus') || empty($permissiontoaccess)) {
 	accessforbidden();
 }
 
@@ -206,7 +206,10 @@ if (empty($reshook)) {
 	// include DOL_DOCUMENT_ROOT.'/core/actions_sendmails.inc.php';
 
 
-	if ($action == 'analyze') { // && $permissiontoadd)
+	if ($action == 'analyze' && $permissiontoadd) {
+		if (!peppolCheckToken()) {
+			accessforbidden($langs->trans('ErrorBadValueForParameter', 'token'));
+		}
 		$res = $object->importNow();
 	}
 }
@@ -564,7 +567,7 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 			}
 			*/
 			if (isModEnabled('scaninvoices')) {
-				print dolGetButtonAction($langs->trans('PeppolImportThanksToScanInvoices'), '', 'import', $_SERVER['PHP_SELF'] . '?id=' . $object->id . '&action=analyze', '', (int) ($permissiontoadd));
+				print dolGetButtonAction($langs->trans('PeppolImportThanksToScanInvoices'), '', 'import', $_SERVER['PHP_SELF'] . '?id=' . ((int) $object->id) . '&action=analyze&token=' . newToken(), '', (int) ($permissiontoadd));
 			}
 
 			// Delete (need delete permission, or if draft, just need create/modify permission)

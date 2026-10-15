@@ -58,7 +58,7 @@ class modPeppolpeppyrus extends DolibarrModules
 		$this->editor_url = '';
 
 		// Possible values for version are: 'development', 'experimental', 'dolibarr', 'dolibarr_deprecated' or a version string like 'x.y.z'
-		$this->version = '2.2.3';
+		$this->version = '2.3.0';
 		// Url to the file with your last numberversion of this module
 		$this->url_last_version = '';
 
@@ -139,8 +139,8 @@ class modPeppolpeppyrus extends DolibarrModules
 		$this->langfiles = array("peppol@peppolpeppyrus");
 
 		// Prerequisites
-		$this->phpmin = array(7, 1); // Minimum version of PHP required by module
-		$this->need_dolibarr_version = array(10, -3); // Minimum version of Dolibarr required by module
+		$this->phpmin = array(8, 1); // Minimum version of PHP required by module
+		$this->need_dolibarr_version = array(24, 0); // Minimum version of Dolibarr required by module (tested on 24)
 
 		// Messages at activation
 		$this->warnings_activation = array(); // Warning to show when we activate module. array('always'='text') or array('FR'='textfr','ES'='textes'...)
