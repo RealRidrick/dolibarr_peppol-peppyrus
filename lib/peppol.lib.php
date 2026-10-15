@@ -9,6 +9,34 @@ require_once DOL_DOCUMENT_ROOT . '/core/lib/geturl.lib.php';
  */
 
 /**
+ * Return a Peppyrus API key setting.
+ * The test key used to be stored as PEPPOL_AP_API_KEY_DEV, a name that is not encrypted by
+ * dolibarr_set_const(); it is now PEPPOL_AP_DEV_API_KEY. The old name is still read until the key is saved again.
+ *
+ * @param	string	$name	PEPPOL_AP_API_KEY or PEPPOL_AP_DEV_API_KEY
+ * @return	string			The key, or '' if not configured
+ */
+function peppolGetApiKey($name)
+{
+	$value = getDolGlobalString($name);
+	if ($value === '' && $name == 'PEPPOL_AP_DEV_API_KEY') {
+		$value = getDolGlobalString('PEPPOL_AP_API_KEY_DEV');
+	}
+	return $value;
+}
+
+/**
+ * Check the anti-CSRF token of a request that changes data through a link (GET)
+ *
+ * @return	bool	true if the token sent with the request is the current session token
+ */
+function peppolCheckToken()
+{
+	$token = GETPOST('token', 'alpha');
+	return ($token !== '' && function_exists('currentToken') && hash_equals((string) currentToken(), $token));
+}
+
+/**
  * Prepare admin pages header
  *
  * @return array
@@ -292,13 +320,20 @@ function peppolGetSupplierInvoicesList()
 }
 
 function peppolAddLog($ap_name, $fk_object, $object_typeid, $status, $message, $fulldata) {
-	global $db, $user;
-	$sql = "INSERT INTO ".MAIN_DB_PREFIX."peppol(fk_object,object_typeid,status,message,fulldata,ap_name) VALUES (";
-	$sql .= $db->escape($fk_object) . ", ";
-	$sql .= $db->escape($object_typeid) . ", ";
-	$sql .= $db->escape($status) . ", ";
-	$sql .= $db->escape($message) . ", ";
-	$sql .= $db->escape($fulldata) . ", ";
-	$sql .= $db->escape($ap_name);
+	global $db, $user, $conf;
+	$sql = "INSERT INTO ".MAIN_DB_PREFIX."peppol(entity,fk_object,object_typeid,status,message,fulldata,ap_name,fk_user_creat) VALUES (";
+	$sql .= ((int) $conf->entity) . ", ";
+	$sql .= ((int) $fk_object) . ", ";
+	$sql .= ((int) $object_typeid) . ", ";
+	$sql .= "'" . $db->escape(dol_trunc((string) $status, 16, 'right', 'UTF-8', 1)) . "', ";
+	$sql .= "'" . $db->escape(dol_trunc((string) $message, 255, 'right', 'UTF-8', 1)) . "', ";
+	$sql .= "'" . $db->escape((string) $fulldata) . "', ";
+	$sql .= "'" . $db->escape(dol_trunc((string) $ap_name, 16, 'right', 'UTF-8', 1)) . "', ";
+	$sql .= ((int) (is_object($user) ? $user->id : 0)) . ")";
 	$resql = $db->query($sql);
+	if (!$resql) {
+		dol_syslog("peppolAddLog error " . $db->lasterror(), LOG_ERR);
+		return -1;
+	}
+	return 1;
 }

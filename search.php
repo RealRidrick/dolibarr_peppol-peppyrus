@@ -41,6 +41,15 @@ if (!$res) {
 	die("Include of main fails");
 }
 
+
+/**
+ * @var Conf $conf
+ * @var DoliDB $db
+ * @var HookManager $hookmanager
+ * @var Societe $mysoc
+ * @var Translate $langs
+ * @var User $user
+ */
 require_once DOL_DOCUMENT_ROOT . '/societe/class/societe.class.php';
 require_once DOL_DOCUMENT_ROOT . '/core/lib/geturl.lib.php';
 
@@ -64,9 +73,12 @@ $result = restrictedArea($user, 'peppolpeppyrus');
 // Load third party if socid is provided
 $thirdparty = null;
 if ($socid > 0) {
+	restrictedArea($user, 'societe', $socid, '&societe', '', 'fk_soc', 'rowid', 0);
 	$thirdparty = new Societe($db);
 	$res = $thirdparty->fetch($socid);
-	if ($res) {
+	if ($res <= 0) {
+		$thirdparty = null;
+	} else {
 		if ($action == "") {
 			dol_syslog("peppol : Load socid " . $socid . " success ...");
 
@@ -109,8 +121,16 @@ if ($action == 'autodetect' && $socid > 0 && $thirdparty) {
 }
 
 if ($action == 'select') {
-	$participantid = GETPOST('participantid');
-	$peppol_scheme = GETPOST('peppol_scheme');
+	// Changing the Peppol ID of a third party: needs write access to the module and to that third party, and a valid token
+	if (!peppolCheckToken()) {
+		accessforbidden($langs->trans('ErrorBadValueForParameter', 'token'));
+	}
+	if (empty($thirdparty) || !$user->hasRight('peppolpeppyrus', 'write') || !$user->hasRight('societe', 'creer')) {
+		accessforbidden();
+	}
+	restrictedArea($user, 'societe', $socid, '&societe', '', 'fk_soc', 'rowid', 0);
+	$participantid = GETPOST('participantid', 'alphanohtml');
+	$peppol_scheme = GETPOST('peppol_scheme', 'alphanohtml');
 
 	// Extract ICD scheme code from full scheme identifier (e.g., "iso6523-actorid-upis::0208" -> "0208")
 	$schemeCode = '';
@@ -182,7 +202,7 @@ if (!empty($autoDetectedId)) {
 	print '<div class="info">';
 	print '<strong>' . $langs->trans("peppolBestMatchSuccess") . ':</strong> ' . dol_escape_htmltag($autoDetectedId);
 	print '<br><br>';
-	print '<a class="button" href="' . $_SERVER["PHP_SELF"] . '?socid=' . $socid . '&action=select&participantid=' . urlencode($autoDetectedId) . '">';
+	print '<a class="button" href="' . $_SERVER["PHP_SELF"] . '?socid=' . $socid . '&action=select&participantid=' . urlencode($autoDetectedId) . '&token=' . newToken() . '">';
 	print $langs->trans("PeppolApplyPeppolID");
 	print '</a>';
 	print '</div>';
@@ -191,7 +211,7 @@ if (!empty($autoDetectedId)) {
 // Display search results
 if (!empty($searchResults)) {
 	if (isset($searchResults['error'])) {
-		print '<div class="error">' . $searchResults['error'] . '</div>';
+		print '<div class="error">' . dol_escape_htmltag($searchResults['error']) . '</div>';
 	} elseif (isset($searchResults['matches']) && is_array($searchResults['matches'])) {
 		$matches = $searchResults['matches'];
 		$totalCount = count($matches);
@@ -211,7 +231,7 @@ if (!empty($searchResults)) {
 					print '<p style="color: #666;">' . dol_escape_htmltag($name) . '</p>';
 				}
 				print '<br>';
-				print '<a class="button" href="' . $_SERVER["PHP_SELF"] . '?socid=' . $socid . '&action=select&peppol_scheme=' . urlencode($scheme) . '&participantid=' . urlencode($participantId) . '">';
+				print '<a class="button" href="' . $_SERVER["PHP_SELF"] . '?socid=' . $socid . '&action=select&peppol_scheme=' . urlencode($scheme) . '&participantid=' . urlencode($participantId) . '&token=' . newToken() . '">';
 				print $langs->trans("PeppolApplyPeppolID");
 				print '</a>';
 				print '</div>';
@@ -241,7 +261,7 @@ if (!empty($searchResults)) {
 					print '<td>' . dol_escape_htmltag($countryCode) . '</td>';
 					if ($socid > 0) {
 						print '<td>';
-						print '<a class="button smallpaddingimp" href="' . $_SERVER["PHP_SELF"] . '?socid=' . $socid . '&action=select&peppol_scheme=' . urlencode($scheme) . '&participantid=' . urlencode($participantId) . '">';
+						print '<a class="button smallpaddingimp" href="' . $_SERVER["PHP_SELF"] . '?socid=' . $socid . '&action=select&peppol_scheme=' . urlencode($scheme) . '&participantid=' . urlencode($participantId) . '&token=' . newToken() . '">';
 						print $langs->trans("PeppolApplyPeppolID");
 						print '</a>';
 						print '</td>';

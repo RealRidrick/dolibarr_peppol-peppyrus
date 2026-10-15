@@ -301,7 +301,7 @@ class InterfacePeppolTriggers extends DolibarrTriggers
 			// and more...
 			case 'ECMFILES_CREATE':
 			case 'ECMFILES_MODIFY':
-				if (empty($conf->global->PEPPOL_USE_TRIGGER)) {
+				if (!getDolGlobalString('PEPPOL_USE_TRIGGER')) {
 					dol_syslog("Trigger Peppol is not enabled into module setup");
 					return 0;
 				}

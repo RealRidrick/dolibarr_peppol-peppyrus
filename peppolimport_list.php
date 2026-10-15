@@ -59,6 +59,15 @@ if (!$res) {
 	die("Include of main fails");
 }
 
+
+/**
+ * @var Conf $conf
+ * @var DoliDB $db
+ * @var HookManager $hookmanager
+ * @var Societe $mysoc
+ * @var Translate $langs
+ * @var User $user
+ */
 $permissiontoaccess = $user->rights->peppolpeppyrus->import;
 /*
 Note: vérification des droits associés et nécessaires:
@@ -126,7 +135,7 @@ $id = GETPOST('id', 'int');
 $limit = GETPOST('limit', 'int') ? GETPOST('limit', 'int') : $conf->liste_limit;
 $sortfield = GETPOST('sortfield', 'aZ09comma');
 $sortorder = GETPOST('sortorder', 'aZ09comma');
-$page = GETPOSTISSET('pageplusone') ? (GETPOST('pageplusone') - 1) : GETPOST("page", 'int');
+$page = GETPOSTISSET('pageplusone') ? (GETPOSTINT('pageplusone') - 1) : GETPOST("page", 'int');
 if (empty($page) || $page < 0 || GETPOST('button_search', 'alpha') || GETPOST('button_removefilter', 'alpha')) {
 	// If $page is not defined, or '' or -1 or if we click on clear filters
 	$page = 0;
@@ -240,7 +249,10 @@ if (!GETPOST('confirmmassaction', 'alpha') && $massaction != 'presend' && $massa
 	$massaction = '';
 }
 
-if($action == "refresh") {
+if ($action == "refresh") {
+	if (!$user->hasRight('peppolpeppyrus', 'write') || !peppolCheckToken()) {
+		accessforbidden();
+	}
 	peppolGetSupplierInvoicesList();
 }
 
