@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.3.1
+
+- Private customers are skipped silently: no Peppol file and no message, the PDF is made as usual. A customer counts as private when its third party type is "Private individual", or when no type is set and it has neither a Peppol ID nor a VAT number. A business type without these details still gets the warnings. With `PEPPOL_FORCE_XML_WITH_VATNULL` the XML is still made, as before.
+- Dutch translation (`nl_NL`), formal, covering all texts of `en_US` plus texts used by the code that were missing from every language file.
+
 ## 2.3.0
 
 After updating: deactivate and reactivate the module once, so `sql/update_003.sql` adds the `entity` column to `llx_peppol`.
