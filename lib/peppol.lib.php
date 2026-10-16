@@ -53,6 +53,24 @@ function peppolDirectorySearchCandidates($thirdparty)
 }
 
 /**
+ * URL of the third party card to return to after the Peppol ID search.
+ * Built from a fixed list and the third party id, never from a URL given in the request (no open redirect).
+ *
+ * @param	int		$socid		Third party id
+ * @param	string	$backto		'card' (third party), 'comm' (customer) or 'fourn' (supplier)
+ * @return	string				Relative URL, '' without third party
+ */
+function peppolThirdpartyBackUrl($socid, $backto)
+{
+	if ((int) $socid <= 0) {
+		return '';
+	}
+	$pages = array('card' => '/societe/card.php', 'comm' => '/comm/card.php', 'fourn' => '/fourn/card.php');
+	$page = isset($pages[$backto]) ? $pages[$backto] : $pages['card'];
+	return DOL_URL_ROOT . $page . '?socid=' . ((int) $socid);
+}
+
+/**
  * Check the anti-CSRF token of a request that changes data through a link (GET)
  *
  * @return	bool	true if the token sent with the request is the current session token

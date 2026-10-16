@@ -58,7 +58,7 @@ class modPeppolpeppyrus extends DolibarrModules
 		$this->editor_url = '';
 
 		// Possible values for version are: 'development', 'experimental', 'dolibarr', 'dolibarr_deprecated' or a version string like 'x.y.z'
-		$this->version = '2.4.0';
+		$this->version = '2.4.1';
 		// Url to the file with your last numberversion of this module
 		$this->url_last_version = '';
 
@@ -108,6 +108,7 @@ class modPeppolpeppyrus extends DolibarrModules
 				'doMassActions',
 				'thirdpartycard',
 				'thirdpartycomm',
+				'thirdpartysupplier',
 				'globalcard',
 				'odtgeneration',
 				//   'data' => array(

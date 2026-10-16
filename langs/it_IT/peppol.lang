@@ -76,4 +76,7 @@ peppolSearchCriterion_vat=partita IVA
 peppolSearchCriterion_profid1=numero di registro
 peppolSearchCriterion_name=nome
 peppolDirectoryNotFound=Nessun partecipante trovato nella directory Peppol. Provare un altro nome, partita IVA o numero di registro.
+peppolBackToThirdparty_card=Torna alla scheda del soggetto terzo
+peppolBackToThirdparty_comm=Torna alla scheda cliente
+peppolBackToThirdparty_fourn=Torna alla scheda fornitore
 SearchQuery=Ricerca

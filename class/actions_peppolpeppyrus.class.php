@@ -465,10 +465,19 @@ class ActionsPeppolpeppyrus
 				print '<div class="inline-block divButAction"><a class="butAction classfortooltip" title="' . $langs->trans('peppolBtnCheckTooltip') . '" href="' . dol_escape_htmltag($_SERVER["PHP_SELF"]) . '?id=' . ((int) $object->id) . '&action=peppolCheck&token=' . newToken() . '"><i class=\"fa fa-paper-plane\"></i>' . $langs->trans('peppolBtnCheck') . '</a></div>';
 			}
 		}
-		if (in_array('thirdpartycard', $contextArray)) {
+		// Third party, customer and supplier card: open the Peppol ID search in the same window, with a way back to this card
+		$backto = '';
+		if (in_array('thirdpartycomm', $contextArray)) {
+			$backto = 'comm';
+		} elseif (in_array('thirdpartysupplier', $contextArray)) {
+			$backto = 'fourn';
+		} elseif (in_array('thirdpartycard', $contextArray)) {
+			$backto = 'card';
+		}
+		if ($backto !== '' && $user->hasRight('peppolpeppyrus', 'read')) {
 			$langs->load("peppol@peppolpeppyrus");
-			$urlto = dol_buildpath("/peppolpeppyrus/search.php", 1) . "?socid=" . $object->id;
-			print '<div class="inline-block divButAction"><a class="butAction classfortooltip" title="' . $langs->trans("peppolFindPeppolIDPopupTitle") . '" href="' . $urlto . '" target="_blank">' . $langs->trans("peppolBtnFindPeppolID") . '</a></div>';
+			$urlto = dol_buildpath("/peppolpeppyrus/search.php", 1) . "?socid=" . ((int) $object->id) . "&backto=" . $backto;
+			print '<div class="inline-block divButAction"><a class="butAction classfortooltip" title="' . dol_escape_htmltag($langs->trans("peppolFindPeppolIDPopupTitle")) . '" href="' . $urlto . '">' . $langs->trans("peppolBtnFindPeppolID") . '</a></div>';
 		}
 
 		if (! $error) {
