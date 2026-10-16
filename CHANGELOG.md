@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.4.1
+
+- The Peppol ID search opens in the same window instead of a new tab, with a button back to the card it was started from (third party, customer or supplier card). After "Use this ID" the user returns to that card.
+- The search button is also shown on the customer card and the supplier card (hook context `thirdpartysupplier` added; reactivate the module once).
+- The return URL is built from the third party id and a fixed list of cards, never taken from the request.
+- Removed inline JavaScript passed to `llxHeader()` as a script file list (leftover of the popup).
+
 ## 2.4.0
 
 Requirements: Dolibarr 18.0 up to 24.0.2, PHP 7.1 or later (same as the einvoicing library). All functions used exist in Dolibarr 18.

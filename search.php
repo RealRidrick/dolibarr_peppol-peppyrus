@@ -67,6 +67,11 @@ $action = GETPOST('action', 'aZ09');
 // alphanohtml: names contain spaces and dots ("MKB ONDERNEMERS B.V."), aZ09 would empty them
 $search_query = trim(GETPOST('search_query', 'alphanohtml'));
 $socid = GETPOST('socid', 'int');
+$backto = GETPOST('backto', 'aZ09');
+if (!in_array($backto, array('card', 'comm', 'fourn'))) {
+	$backto = 'card';
+}
+$backurl = peppolThirdpartyBackUrl($socid, $backto);
 
 // Security check
 $result = restrictedArea($user, 'peppolpeppyrus');
@@ -160,10 +165,13 @@ if ($action == 'select') {
 	}
 
 	// Save extrafield - update() alone doesn't save extrafields in Dolibarr!
-	$thirdparty->insertExtraFields();
-	setEventMessage($langs->trans('peppolIdSet'));
-	print "<script>window.top.location.href = \"" . dol_buildpath('/societe/card.php?id='.$socid, 1) . "\";</script>";
-	// header('Location: '.dol_buildpath('/societe/card.php?id='.$socid, 1));
+	if ($thirdparty->insertExtraFields() < 0) {
+		setEventMessages($thirdparty->error, $thirdparty->errors, 'errors');
+	} else {
+		setEventMessage($langs->trans('peppolIdSet'));
+	}
+	// Back to the card the search was started from, in the same window
+	header('Location: ' . $backurl);
 	exit;
 }
 
@@ -175,24 +183,21 @@ $form = new Form($db);
 
 $title = $langs->trans("PeppolSearch");
 $help_url = '';
-$arrayofjs = ["	$(\"*[id*='idfordialog']\").each(function() {
-		$(this).on('dialogclose', function(event) {
-			location.reload();
-		});
-	});
-"];
-llxHeader('', $title, $help_url,'',0,0,$arrayofjs);
+llxHeader('', $title, $help_url);
 
 print '<form method="POST" action="' . $_SERVER["PHP_SELF"] . '">';
 print '<input type="hidden" name="token" value="' . newToken() . '">';
 print '<input type="hidden" name="action" value="search">';
 if ($socid > 0) {
-	print '<input type="hidden" name="socid" value="' . $socid . '">';
+	print '<input type="hidden" name="socid" value="' . ((int) $socid) . '">';
+	print '<input type="hidden" name="backto" value="' . dol_escape_htmltag($backto) . '">';
 }
 
 // Show title with thirdparty name if available
 if ($thirdparty && $thirdparty->id > 0) {
-	print load_fiche_titre($langs->trans("peppolFindPeppolIDPopupTitle") . ' - ' . dol_escape_htmltag($thirdparty->name), '', 'peppol@peppolpeppyrus');
+	// Button back to the card the search was started from
+	$linkback = '<a class="butAction" href="' . dol_escape_htmltag($backurl) . '">' . $langs->trans("peppolBackToThirdparty_" . $backto) . '</a>';
+	print load_fiche_titre($langs->trans("peppolFindPeppolIDPopupTitle") . ' - ' . dol_escape_htmltag($thirdparty->name), $linkback, 'peppol@peppolpeppyrus');
 } else {
 	print load_fiche_titre($title, '', 'peppol@peppolpeppyrus');
 }
@@ -218,7 +223,7 @@ if (!empty($autoDetectedId)) {
 	print '<div class="info">';
 	print '<strong>' . $langs->trans("peppolBestMatchSuccess") . ':</strong> ' . dol_escape_htmltag($autoDetectedId);
 	print '<br><br>';
-	print '<a class="button" href="' . $_SERVER["PHP_SELF"] . '?socid=' . $socid . '&action=select&participantid=' . urlencode($autoDetectedId) . '&token=' . newToken() . '">';
+	print '<a class="button" href="' . $_SERVER["PHP_SELF"] . '?socid=' . ((int) $socid) . '&backto=' . $backto . '&action=select&participantid=' . urlencode($autoDetectedId) . '&token=' . newToken() . '">';
 	print $langs->trans("PeppolApplyPeppolID");
 	print '</a>';
 	print '</div>';
@@ -247,7 +252,7 @@ if (!empty($searchResults)) {
 					print '<p style="color: #666;">' . dol_escape_htmltag($name) . '</p>';
 				}
 				print '<br>';
-				print '<a class="button" href="' . $_SERVER["PHP_SELF"] . '?socid=' . $socid . '&action=select&peppol_scheme=' . urlencode($scheme) . '&participantid=' . urlencode($participantId) . '&token=' . newToken() . '">';
+				print '<a class="button" href="' . $_SERVER["PHP_SELF"] . '?socid=' . ((int) $socid) . '&backto=' . $backto . '&action=select&peppol_scheme=' . urlencode($scheme) . '&participantid=' . urlencode($participantId) . '&token=' . newToken() . '">';
 				print $langs->trans("PeppolApplyPeppolID");
 				print '</a>';
 				print '</div>';
@@ -277,7 +282,7 @@ if (!empty($searchResults)) {
 					print '<td>' . dol_escape_htmltag($countryCode) . '</td>';
 					if ($socid > 0) {
 						print '<td>';
-						print '<a class="button smallpaddingimp" href="' . $_SERVER["PHP_SELF"] . '?socid=' . $socid . '&action=select&peppol_scheme=' . urlencode($scheme) . '&participantid=' . urlencode($participantId) . '&token=' . newToken() . '">';
+						print '<a class="button smallpaddingimp" href="' . $_SERVER["PHP_SELF"] . '?socid=' . ((int) $socid) . '&backto=' . $backto . '&action=select&peppol_scheme=' . urlencode($scheme) . '&participantid=' . urlencode($participantId) . '&token=' . newToken() . '">';
 						print $langs->trans("PeppolApplyPeppolID");
 						print '</a>';
 						print '</td>';

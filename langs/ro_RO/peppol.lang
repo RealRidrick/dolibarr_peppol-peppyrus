@@ -76,4 +76,7 @@ peppolSearchCriterion_vat=cod TVA
 peppolSearchCriterion_profid1=număr de înregistrare
 peppolSearchCriterion_name=denumire
 peppolDirectoryNotFound=Niciun participant găsit în directorul Peppol. Încercați altă denumire, cod TVA sau număr de înregistrare.
+peppolBackToThirdparty_card=Înapoi la fișa terțului
+peppolBackToThirdparty_comm=Înapoi la fișa clientului
+peppolBackToThirdparty_fourn=Înapoi la fișa furnizorului
 SearchQuery=Căutare
