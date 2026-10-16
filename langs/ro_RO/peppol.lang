@@ -80,3 +80,14 @@ peppolBackToThirdparty_card=Înapoi la fișa terțului
 peppolBackToThirdparty_comm=Înapoi la fișa clientului
 peppolBackToThirdparty_fourn=Înapoi la fișa furnizorului
 SearchQuery=Căutare
+
+# Peppol directory results
+peppolSameOrganisation=Aceste %s identificatoare aparțin aceleiași organizații. Alegeți de preferință identificatorul recomandat.
+peppolLocation=Țară / localitate
+peppolAcceptsInvoice=Acceptă facturi
+peppolMatchThirdparty=Corespondență cu terțul
+peppolRecommended=Recomandat
+peppolRegisteredSince=Pe Peppol din %s
+peppolUnknown=Necunoscut
+peppolMatchesField=Același %s
+peppolNoRecommendation=Niciunul dintre aceste identificatoare nu corespunde codului TVA sau unui identificator profesional al terțului.
