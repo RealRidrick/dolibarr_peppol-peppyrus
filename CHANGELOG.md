@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.4.2
+
+Peppol ID search results give enough information to choose:
+
+- The kind of number behind each ID (for example KvK number, OIN, VAT number NL, enterprise number BE), from the ICD/EAS scheme code.
+- Whether the ID accepts invoices (UBL Invoice document type registered in the directory).
+- Whether the ID matches the VAT number or a professional ID (for example the KvK number) of the third party in Dolibarr.
+- Location, registration date and additional information from the directory.
+- A "Recommended" mark on the first ID that matches the third party and accepts invoices.
+- When all results belong to the same organisation, a note that any ID that accepts invoices reaches the same recipient.
+
 ## 2.4.1
 
 - The Peppol ID search opens in the same window instead of a new tab, with a button back to the card it was started from (third party, customer or supplier card). After "Use this ID" the user returns to that card.

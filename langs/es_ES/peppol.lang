@@ -80,3 +80,14 @@ peppolBackToThirdparty_card=Volver a la ficha del tercero
 peppolBackToThirdparty_comm=Volver a la ficha del cliente
 peppolBackToThirdparty_fourn=Volver a la ficha del proveedor
 SearchQuery=Búsqueda
+
+# Peppol directory results
+peppolSameOrganisation=Estos %s identificadores pertenecen a la misma organización. Elija preferentemente el recomendado.
+peppolLocation=País / localidad
+peppolAcceptsInvoice=Acepta facturas
+peppolMatchThirdparty=Coincidencia con el tercero
+peppolRecommended=Recomendado
+peppolRegisteredSince=En Peppol desde %s
+peppolUnknown=Desconocido
+peppolMatchesField=Mismo %s
+peppolNoRecommendation=Ninguno de estos identificadores coincide con el NIF-IVA o un identificador profesional del tercero.

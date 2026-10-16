@@ -234,63 +234,112 @@ if (!empty($searchResults)) {
 	if (isset($searchResults['error'])) {
 		print '<div class="error">' . dol_escape_htmltag($searchResults['error']) . '</div>';
 	} elseif (isset($searchResults['matches']) && is_array($searchResults['matches'])) {
-		$matches = $searchResults['matches'];
-		$totalCount = count($matches);
+		$infos = array();
+		foreach ($searchResults['matches'] as $match) {
+			$info = peppolDirectoryMatchInfo($match, $thirdparty);
+			if ($info['participantId'] !== '') {
+				$infos[] = $info;
+			}
+		}
 
-		if ($totalCount > 0) {
-			// If only one result and we have a socid, show simplified view
-			if ($totalCount == 1 && $socid > 0) {
-				$match = $matches[0];
-				$participantId = isset($match['participantID']) ? $match['participantID']['value'] : '';
-				$scheme = isset($match['participantID']) ? $match['participantID']['scheme'] : '';
-				$name = isset($match['entities'][0]['name'][0]['name']) ? $match['entities'][0]['name'][0]['name'] : '';
-
-				print '<div class="info" style="margin-top: 20px; padding: 15px;">';
-				print '<p><strong>' . $langs->trans("peppolBestMatchSuccess") . '</strong></p>';
-				print '<p style="font-size: 1.2em; margin: 10px 0;"><code>' . dol_escape_htmltag($participantId) . '</code></p>';
-				if (!empty($name)) {
-					print '<p style="color: #666;">' . dol_escape_htmltag($name) . '</p>';
+		if (count($infos) > 0) {
+			// Recommended: matches the data of the third party and can receive invoices (or unknown)
+			$recommended = -1;
+			foreach ($infos as $i => $info) {
+				if ($info['matchedField'] !== '' && $info['acceptsInvoice'] !== false) {
+					$recommended = $i;
+					break;
 				}
-				print '<br>';
-				print '<a class="button" href="' . $_SERVER["PHP_SELF"] . '?socid=' . ((int) $socid) . '&backto=' . $backto . '&action=select&peppol_scheme=' . urlencode($scheme) . '&participantid=' . urlencode($participantId) . '&token=' . newToken() . '">';
-				print $langs->trans("PeppolApplyPeppolID");
-				print '</a>';
-				print '</div>';
-			} else {
-				// Multiple results - show simple table
-				print '<br>';
-				print '<div class="div-table-responsive">';
-				print '<table class="tagtable nobottomiftotal liste">';
-				print '<tr class="liste_titre">';
-				print '<th>' . $langs->trans("peppolParticipantID") . '</th>';
-				print '<th>' . $langs->trans("peppolName") . '</th>';
-				print '<th>' . $langs->trans("peppolCountryCode") . '</th>';
+			}
+
+			// Several IDs of the same organisation (same name and country): say that each of them works
+			$names = array();
+			foreach ($infos as $info) {
+				$names[strtoupper($info['name']) . '|' . $info['country']] = true;
+			}
+			if (count($infos) > 1 && count($names) == 1) {
+				print '<div class="info" style="margin-top: 15px;">' . $langs->trans("peppolSameOrganisation", count($infos)) . '</div>';
+			}
+
+			print '<br>';
+			print '<div class="div-table-responsive">';
+			print '<table class="tagtable nobottomiftotal liste">';
+			print '<tr class="liste_titre">';
+			print '<th>' . $langs->trans("peppolParticipantID") . '</th>';
+			print '<th>' . $langs->trans("peppolName") . '</th>';
+			print '<th>' . $langs->trans("peppolLocation") . '</th>';
+			print '<th class="center">' . $langs->trans("peppolAcceptsInvoice") . '</th>';
+			print '<th>' . $langs->trans("peppolMatchThirdparty") . '</th>';
+			if ($socid > 0) {
+				print '<th></th>';
+			}
+			print '</tr>';
+
+			foreach ($infos as $i => $info) {
+				print '<tr class="oddeven">';
+
+				// Peppol ID with the kind of number
+				print '<td><strong>' . dol_escape_htmltag($info['participantId']) . '</strong>';
+				$schemelabel = peppolSchemeLabel($info['icd']);
+				if ($schemelabel !== '') {
+					print '<br><span class="opacitymedium small">' . dol_escape_htmltag($schemelabel) . '</span>';
+				}
+				if ($i === $recommended) {
+					print '<br><span class="badge badge-status4">' . $langs->trans("peppolRecommended") . '</span>';
+				}
+				print '</td>';
+
+				// Name, extra information from the directory
+				print '<td>' . dol_escape_htmltag($info['name']);
+				if ($info['additionalInfo'] !== '') {
+					print '<br><span class="opacitymedium small">' . dol_escape_htmltag(dol_trunc($info['additionalInfo'], 120)) . '</span>';
+				}
+				if ($info['regDate'] !== '') {
+					print '<br><span class="opacitymedium small">' . $langs->trans("peppolRegisteredSince", dol_escape_htmltag($info['regDate'])) . '</span>';
+				}
+				print '</td>';
+
+				// Country and location
+				print '<td>' . dol_escape_htmltag($info['country']);
+				if ($info['location'] !== '') {
+					print '<br><span class="opacitymedium small">' . dol_escape_htmltag(dol_trunc($info['location'], 80)) . '</span>';
+				}
+				print '</td>';
+
+				// Can receive invoices
+				print '<td class="center">';
+				if ($info['acceptsInvoice'] === true) {
+					print '<span class="badge badge-status4">' . $langs->trans("Yes") . '</span>';
+				} elseif ($info['acceptsInvoice'] === false) {
+					print '<span class="badge badge-status8">' . $langs->trans("No") . '</span>';
+				} else {
+					print '<span class="opacitymedium">' . $langs->trans("peppolUnknown") . '</span>';
+				}
+				print '</td>';
+
+				// Match with the data of the third party in Dolibarr
+				print '<td>';
+				if ($info['matchedField'] !== '') {
+					$fieldlabel = ($info['matchedField'] == 'tva_intra') ? $langs->trans("VATIntra") : $langs->transcountry(str_replace('idprof', 'ProfId', $info['matchedField']), (is_object($thirdparty) ? $thirdparty->country_code : ''));
+					print '<span class="badge badge-status4">' . $langs->trans("peppolMatchesField", dol_escape_htmltag($fieldlabel)) . '</span>';
+				} else {
+					print '<span class="opacitymedium">-</span>';
+				}
+				print '</td>';
+
 				if ($socid > 0) {
-					print '<th></th>';
+					print '<td class="right">';
+					print '<a class="button smallpaddingimp" href="' . $_SERVER["PHP_SELF"] . '?socid=' . ((int) $socid) . '&backto=' . $backto . '&action=select&peppol_scheme=' . urlencode($info['scheme']) . '&participantid=' . urlencode($info['participantId']) . '&token=' . newToken() . '">';
+					print $langs->trans("PeppolApplyPeppolID");
+					print '</a>';
+					print '</td>';
 				}
 				print '</tr>';
-
-				foreach ($matches as $match) {
-					$participantId = isset($match['participantID']) ? $match['participantID']['value'] : '';
-					$scheme = isset($match['participantID']) ? $match['participantID']['scheme'] : '';
-					$name = isset($match['entities'][0]['name'][0]['name']) ? $match['entities'][0]['name'][0]['name'] : '';
-					$countryCode = isset($match['entities'][0]['countryCode']) ? $match['entities'][0]['countryCode'] : '';
-
-					print '<tr class="oddeven">';
-					print '<td><strong>' . dol_escape_htmltag($participantId) . '</strong></td>';
-					print '<td>' . dol_escape_htmltag($name) . '</td>';
-					print '<td>' . dol_escape_htmltag($countryCode) . '</td>';
-					if ($socid > 0) {
-						print '<td>';
-						print '<a class="button smallpaddingimp" href="' . $_SERVER["PHP_SELF"] . '?socid=' . ((int) $socid) . '&backto=' . $backto . '&action=select&peppol_scheme=' . urlencode($scheme) . '&participantid=' . urlencode($participantId) . '&token=' . newToken() . '">';
-						print $langs->trans("PeppolApplyPeppolID");
-						print '</a>';
-						print '</td>';
-					}
-					print '</tr>';
-				}
-				print '</table>';
-				print '</div>';
+			}
+			print '</table>';
+			print '</div>';
+			if ($recommended < 0 && is_object($thirdparty)) {
+				print '<div class="opacitymedium" style="margin-top: 8px;">' . $langs->trans("peppolNoRecommendation") . '</div>';
 			}
 		} else {
 			print '<div class="warning" style="margin-top: 20px;">' . $langs->trans("peppolDirectoryNotFound") . '</div>';

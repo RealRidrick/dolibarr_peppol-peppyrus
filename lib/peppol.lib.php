@@ -53,6 +53,87 @@ function peppolDirectorySearchCandidates($thirdparty)
 }
 
 /**
+ * Label of a Peppol participant identifier scheme (ICD / EAS code), for display.
+ *
+ * @param	string	$icd	Scheme code, e.g. 0106
+ * @return	string			Translation key result, or '' when unknown
+ */
+function peppolSchemeLabel($icd)
+{
+	global $langs;
+	if (!preg_match('/^\d{4}$/', (string) $icd)) {
+		return '';
+	}
+	$key = 'peppolScheme' . $icd;
+	$label = $langs->trans($key);
+	return ($label === $key) ? '' : $label;
+}
+
+/**
+ * Turn one match of the Peppol directory into the data shown to the user, and compare it with the third party.
+ *
+ * @param	array		$match		One element of the "matches" list of the directory JSON
+ * @param	Societe|null	$thirdparty	Third party the search was started from, or null
+ * @return	array					participantId, scheme, icd, value, name, country, location, regDate,
+ *									additionalInfo, acceptsInvoice (true/false/null when unknown), matchedField ('' when no match)
+ */
+function peppolDirectoryMatchInfo($match, $thirdparty = null)
+{
+	$info = array(
+		'participantId' => '', 'scheme' => '', 'icd' => '', 'value' => '', 'name' => '', 'country' => '',
+		'location' => '', 'regDate' => '', 'additionalInfo' => '', 'acceptsInvoice' => null, 'matchedField' => '',
+	);
+	if (!is_array($match)) {
+		return $info;
+	}
+	$info['participantId'] = (string) ($match['participantID']['value'] ?? '');
+	$info['scheme'] = (string) ($match['participantID']['scheme'] ?? '');
+	if (preg_match('/^(\d{4}):(.+)$/', $info['participantId'], $reg)) {
+		$info['icd'] = $reg[1];
+		$info['value'] = $reg[2];
+	} else {
+		$info['value'] = $info['participantId'];
+	}
+	$entity = (isset($match['entities'][0]) && is_array($match['entities'][0])) ? $match['entities'][0] : array();
+	$info['name'] = (string) ($entity['name'][0]['name'] ?? '');
+	$info['country'] = (string) ($entity['countryCode'] ?? '');
+	$info['location'] = trim(preg_replace('/\s+/', ' ', (string) ($entity['geoInfo'] ?? '')));
+	$info['regDate'] = (string) ($entity['regDate'] ?? '');
+	$info['additionalInfo'] = trim((string) ($entity['additionalInfo'] ?? ''));
+
+	// Can this ID receive invoices? Look for the UBL Invoice document type in the registered document types.
+	if (isset($match['docTypes']) && is_array($match['docTypes'])) {
+		$info['acceptsInvoice'] = false;
+		foreach ($match['docTypes'] as $doctype) {
+			$value = (string) ($doctype['value'] ?? '');
+			if (strpos($value, 'Invoice-2::Invoice') !== false) {
+				$info['acceptsInvoice'] = true;
+				break;
+			}
+		}
+	}
+
+	// Does the ID match the VAT number or a professional ID of the third party?
+	if (is_object($thirdparty)) {
+		$normalize = function ($v) {
+			return strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string) $v));
+		};
+		$value = $normalize($info['value']);
+		if ($value !== '') {
+			$fields = array('tva_intra' => 'VATIntra', 'idprof1' => 'ProfId1', 'idprof2' => 'ProfId2', 'idprof3' => 'ProfId3', 'idprof4' => 'ProfId4', 'idprof5' => 'ProfId5', 'idprof6' => 'ProfId6');
+			foreach ($fields as $field => $labelkey) {
+				$own = $normalize($thirdparty->$field ?? '');
+				if ($own !== '' && $own === $value) {
+					$info['matchedField'] = $field;
+					break;
+				}
+			}
+		}
+	}
+	return $info;
+}
+
+/**
  * URL of the third party card to return to after the Peppol ID search.
  * Built from a fixed list and the third party id, never from a URL given in the request (no open redirect).
  *
