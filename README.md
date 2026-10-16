@@ -82,8 +82,8 @@ This module allows sending electronic invoices via the PEPPOL network using the 
 
 ## Requirements
 
-- Dolibarr 14.0 or higher
-- PHP 7.4 or higher
+- Dolibarr 18.0 up to 24.0.2
+- PHP 7.1 or higher
 - A Peppyrus account (free registration at [peppyrus.be](https://www.peppyrus.be))
 
 ## Installation

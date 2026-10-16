@@ -139,6 +139,13 @@ peppolName = Naam
 peppolCountryCode = Land
 peppolDocumentTypes = Geaccepteerde documenttypes
 peppolAction = Actie
+peppolSearchQueryPlaceholder = Bedrijfsnaam, btw-nummer of ondernemingsnummer
+peppolSearchedBy = gezocht op %s
+peppolSearchCriterion_vat = btw-nummer
+peppolSearchCriterion_profid1 = ondernemingsnummer
+peppolSearchCriterion_name = naam
+peppolDirectoryNotFound = Geen deelnemer gevonden in de Peppol-directory. Probeer een andere naam, een btw-nummer of een ondernemingsnummer.
+SearchQuery = Zoekterm
 peppolIdSet = Peppol-identificatie geconfigureerd
 PeppolErrorNeedPDF = Het PDF-bestand van de factuur lijkt niet aanwezig te zijn!
 

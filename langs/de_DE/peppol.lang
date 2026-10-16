@@ -142,6 +142,13 @@ peppolName = Name
 peppolCountryCode = Land
 peppolDocumentTypes = Akzeptierte Dokumenttypen
 peppolAction = Aktion
+peppolSearchQueryPlaceholder = Firmenname, USt-IdNr. oder Registernummer
+peppolSearchedBy = gesucht nach %s
+peppolSearchCriterion_vat = USt-IdNr.
+peppolSearchCriterion_profid1 = Registernummer
+peppolSearchCriterion_name = Name
+peppolDirectoryNotFound = Kein Teilnehmer im Peppol-Verzeichnis gefunden. Versuchen Sie einen anderen Namen, eine USt-IdNr. oder eine Registernummer.
+SearchQuery = Suchbegriff
 peppolIdSet = Peppol-ID konfiguriert
 PeppolErrorNeedPDF = Die PDF-Datei der Rechnung scheint nicht vorhanden zu sein!
 

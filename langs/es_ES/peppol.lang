@@ -68,3 +68,12 @@ PeppolSecretKeepCurrent=Dejar vacío para conservar la clave actual
 PeppolCheckErrorCustomerTown=Su cliente no tiene ciudad asociada
 PeppolCheckErrorCustomerCountry=No se especifica el país de su cliente
 PeppolCheckErrorCustomerVAT=Su cliente no tiene número de IVA
+
+# Peppol directory search
+peppolSearchQueryPlaceholder=Razón social, NIF-IVA o número de registro
+peppolSearchedBy=búsqueda por %s
+peppolSearchCriterion_vat=NIF-IVA
+peppolSearchCriterion_profid1=número de registro
+peppolSearchCriterion_name=nombre
+peppolDirectoryNotFound=No se encontró ningún participante en el directorio Peppol. Pruebe otro nombre, NIF-IVA o número de registro.
+SearchQuery=Búsqueda

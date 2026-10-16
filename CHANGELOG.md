@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.4.0
+
+Requirements: Dolibarr 18.0 up to 24.0.2, PHP 7.1 or later (same as the einvoicing library). All functions used exist in Dolibarr 18.
+
+- Peppol ID search from the third party card: searches the VAT number, then professional ID 1 (KvK number in the Netherlands), then the company name, and stops at the first search with results. Many participants are registered with their registration number (for example scheme 0106 KvK) and were not found by VAT number. The page shows which criterion was used.
+- The search field is also shown from the third party card, so another name or number can be tried. Names with spaces and dots (for example "B.V.") are accepted; before, they were emptied by the input filter, so a search by name never ran.
+- Request headers to the Peppol directory are sent as "Name: value" lines (they were ignored).
+- Log files no longer contain names, VAT numbers, registration numbers, Peppol IDs, addresses, e-mail addresses, bank details or whole objects (invoice, third party, seller, buyer, access point responses). Logs keep technical information: record ids, file paths, HTTP codes, number of results.
+
 ## 2.3.1
 
 - Private customers are skipped silently: no Peppol file and no message, the PDF is made as usual. A customer counts as private when its third party type is "Private individual", or when no type is set and it has neither a Peppol ID nor a VAT number. A business type without these details still gets the warnings. With `PEPPOL_FORCE_XML_WITH_VATNULL` the XML is still made, as before.
@@ -34,4 +43,4 @@ Fixes:
 - `fileExist()` of an import was empty, so the mass action "analyze" reported every file as missing.
 - Renaming an import from its provisional ref used a wrong directory and index path.
 
-Requirements: Dolibarr 24, PHP 8.1.
+Requirements: Dolibarr 24, PHP 8.1 (lowered to Dolibarr 18 / PHP 7.1 in 2.4.0).

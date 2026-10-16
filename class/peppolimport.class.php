@@ -272,7 +272,6 @@ class Peppolimport extends \CommonObject
 			$this->status = self::STATUS_DRAFT;
 		}
 
-		dol_syslog("Peppol::Peppolimport: create object : " . json_encode($this));
 		if (null === $this->peppolid) {
 			return -2;
 		}
@@ -1231,13 +1230,13 @@ class Peppolimport extends \CommonObject
 
 	public function setValue($key, $value)
 	{
-		dol_syslog("PeppolImport set " . $key . ", value=" . $value);
+		dol_syslog("PeppolImport set " . $key);
 		$this->{$key} = $value;
 	}
 
 	public function setValues($array)
 	{
-		dol_syslog("PeppolImport setvalues " . json_encode($array));
+		dol_syslog("PeppolImport setvalues for " . count($array) . " field(s)");
 		foreach ($array as $key => $value) {
 			$this->{$key} = $value;
 		}

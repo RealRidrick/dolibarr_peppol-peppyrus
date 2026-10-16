@@ -293,7 +293,7 @@ class Peppyrus extends PeppolAP
 
 		$result = getURLContent($url, 'GET', '', 1, $headers, array('https'));
 
-		dol_syslog("Peppyrus::checkAccessPoint CURL result is " . json_encode($result));
+		dol_syslog("Peppyrus::checkAccessPoint HTTP code " . ($result['http_code'] ?? 'unknown'));
 
 		// Use centralized response handler
 		$response = $this->handleApiResponse($result, 'checkAccessPoint');
@@ -409,7 +409,7 @@ class Peppyrus extends PeppolAP
 
 		$result = getURLContent($url, 'POST', $body, 1, $headers, array('https'));
 
-		dol_syslog("Peppyrus::sendToAccessPoint CURL result is " . json_encode($result));
+		dol_syslog("Peppyrus::sendToAccessPoint HTTP code " . ($result['http_code'] ?? 'unknown'));
 
 		// Use centralized response handler
 		$response = $this->handleApiResponse($result, 'sendToAccessPoint');
@@ -428,7 +428,7 @@ class Peppyrus extends PeppolAP
 
 				// Save Peppyrus message ID if extrafield exists
 				if (array_key_exists('options_peppol_id', $object->array_options)) {
-					dol_syslog("Peppol update extrafields : update object->array_options['options_peppol_id'] to " . $json->id);
+					dol_syslog("Peppol update extrafields : store the Peppyrus message id on the invoice");
 					$object->array_options['options_peppol_id'] = $json->id;
 					$object->updateExtraField('peppol_id');
 				} else {
@@ -487,7 +487,7 @@ class Peppyrus extends PeppolAP
 
 		$result = getURLContent($url, 'GET', '', 1, $headers, array('https'));
 
-		dol_syslog("Peppyrus::checkThirdparty CURL result is " . json_encode($result));
+		dol_syslog("Peppyrus::checkThirdparty HTTP code " . ($result['http_code'] ?? 'unknown'));
 
 		// Use centralized response handler
 		$response = $this->handleApiResponse($result, 'checkThirdparty');
@@ -549,7 +549,7 @@ class Peppyrus extends PeppolAP
 
 		$result = getURLContent($url, 'GET', '', 1, $headers, array('https'));
 
-		dol_syslog("Peppyrus::getSupplierInvoicesList CURL result is " . json_encode($result));
+		dol_syslog("Peppyrus::getSupplierInvoicesList HTTP code " . ($result['http_code'] ?? 'unknown'));
 
 		// Use centralized response handler
 		$response = $this->handleApiResponse($result, 'getSupplierInvoicesList');
@@ -593,7 +593,7 @@ class Peppyrus extends PeppolAP
 			$res = $pi->create($user);
 			if ($res > 0) {
 				$res = $pi->validate($user);
-				dol_syslog("Peppolimport Validate return " . json_encode($res));
+				dol_syslog("Peppolimport Validate return " . ((int) $res));
 				$resXml = $this->getSupplierInvoice($pi);
 				$resPdf = $this->getSupplierInvoicePdf($pi);
 
@@ -605,7 +605,7 @@ class Peppyrus extends PeppolAP
 					}
 				}
 			} else {
-				dol_syslog("Peppolimport Error : " . json_encode($res));
+				dol_syslog("Peppolimport Error : " . ((int) $res));
 			}
 		}
 
@@ -745,7 +745,7 @@ class Peppyrus extends PeppolAP
 
 		$result = getURLContent($url, 'PATCH', '', 1, $headers, array('https'));
 
-		dol_syslog("Peppyrus::confirmSupplierInvoice CURL result is " . json_encode($result));
+		dol_syslog("Peppyrus::confirmSupplierInvoice HTTP code " . ($result['http_code'] ?? 'unknown'));
 
 		// Use centralized response handler
 		$response = $this->handleApiResponse($result, 'confirmSupplierInvoice');
@@ -793,7 +793,7 @@ class Peppyrus extends PeppolAP
 		// and potentially sending a negative response message
 
 		dol_syslog("Peppyrus::rejectSupplierInvoice - Peppyrus does not provide a specific reject endpoint", LOG_INFO);
-		dol_syslog("Peppyrus::rejectSupplierInvoice - Reason: " . $reason, LOG_INFO);
+		dol_syslog("Peppyrus::rejectSupplierInvoice called", LOG_INFO);
 
 		setEventMessage($langs->trans('peppolRejectNotAvailable'), 'warnings');
 
@@ -832,7 +832,7 @@ class Peppyrus extends PeppolAP
 
 		$result = getURLContent($url, 'GET', '', 1, $headers, array('https'));
 
-		dol_syslog("Peppyrus::getMessageReport CURL result is " . json_encode($result));
+		dol_syslog("Peppyrus::getMessageReport HTTP code " . ($result['http_code'] ?? 'unknown'));
 
 		// Use centralized response handler
 		$response = $this->handleApiResponse($result, 'getMessageReport');
@@ -884,7 +884,7 @@ class Peppyrus extends PeppolAP
 
 		$result = getURLContent($url, 'GET', '', 1, $headers, array('https'));
 
-		dol_syslog("Peppyrus::findPeppolIdByVat CURL result is " . json_encode($result));
+		dol_syslog("Peppyrus::findPeppolIdByVat HTTP code " . ($result['http_code'] ?? 'unknown'));
 
 		// Use centralized response handler
 		$response = $this->handleApiResponse($result, 'findPeppolIdByVat');
@@ -942,7 +942,7 @@ class Peppyrus extends PeppolAP
 
 		$result = getURLContent($url, 'GET', '', 1, $headers, array('https'));
 
-		dol_syslog("Peppyrus::searchPeppolDirectory CURL result is " . json_encode($result));
+		dol_syslog("Peppyrus::searchPeppolDirectory HTTP code " . ($result['http_code'] ?? 'unknown'));
 
 		// Use centralized response handler
 		$response = $this->handleApiResponse($result, 'searchPeppolDirectory');
@@ -982,7 +982,7 @@ class Peppyrus extends PeppolAP
 
 		$result = getURLContent($url, 'GET', '', 1, $headers, array('https'));
 
-		dol_syslog("Peppyrus::getOrganizationPeppolInfo CURL result is " . json_encode($result));
+		dol_syslog("Peppyrus::getOrganizationPeppolInfo HTTP code " . ($result['http_code'] ?? 'unknown'));
 
 		// Use centralized response handler
 		$response = $this->handleApiResponse($result, 'getOrganizationPeppolInfo');

@@ -26,6 +26,33 @@ function peppolGetApiKey($name)
 }
 
 /**
+ * Search terms to find a third party in the Peppol directory, in the order to try them.
+ * Participants are registered with different identifiers depending on the country: for example VAT number (9944 for NL,
+ * 9925 for BE), registration number (0106 KvK for NL, 0208 for BE) or another national number. The directory search
+ * matches identifiers and names, so try the VAT number, then professional ID 1 (KvK number in the Netherlands), then the name.
+ *
+ * @param	Societe	$thirdparty		Third party
+ * @return	array<string,string>	criterion => search term ('vat', 'profid1', 'name'), empty or duplicate terms left out
+ */
+function peppolDirectorySearchCandidates($thirdparty)
+{
+	$candidates = array();
+	$vat = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string) ($thirdparty->tva_intra ?? '')));
+	if ($vat !== '') {
+		$candidates['vat'] = $vat;
+	}
+	$profid1 = preg_replace('/[^A-Za-z0-9]/', '', (string) ($thirdparty->idprof1 ?? ''));
+	if ($profid1 !== '' && strlen($profid1) >= 6 && !in_array($profid1, $candidates, true)) {
+		$candidates['profid1'] = $profid1;
+	}
+	$name = trim(preg_replace('/\s+/', ' ', (string) ($thirdparty->name ?? '')));
+	if ($name !== '') {
+		$candidates['name'] = $name;
+	}
+	return $candidates;
+}
+
+/**
  * Check the anti-CSRF token of a request that changes data through a link (GET)
  *
  * @return	bool	true if the token sent with the request is the current session token
@@ -80,7 +107,7 @@ function peppolGetIdentifierSchemeFromVatNumber($vatNumber)
 	if ($search == 'RO') {
 		return null;
 	}
-	dol_syslog('peppolGetIdentifierSchemeFromVatNumber=' . $vatNumber . ", search=" . $search);
+	dol_syslog('peppolGetIdentifierSchemeFromVatNumber country prefix=' . $search);
 
 	$csvFile = __DIR__ . "/PeppolCodeLists-ParticipantIdentifierSchemesv7.5.csv";
 

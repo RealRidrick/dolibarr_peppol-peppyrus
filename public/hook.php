@@ -201,11 +201,11 @@ function handleInboundDocument($db, $headers, $xml)
 	$documentTypeScheme = $headers['x-scrada-peppol-document-type-scheme'] ?? '';
 	$documentTypeValue = $headers['x-scrada-peppol-document-type-value'] ?? '';
 
-	dol_syslog("Peppol webhook - New inbound document: $documentId from $senderId", LOG_INFO);
+	dol_syslog("Peppol webhook - New inbound document: $documentId", LOG_INFO);
 
 	// Multicompany: the entity comes from the URL, so check the document is addressed to the Peppol ID of this entity
 	if (!peppolWebhookReceiverMatches($receiverId)) {
-		dol_syslog("Peppol webhook - Document $documentId is addressed to $receiverId, not to the Peppol ID of entity " . ((int) $conf->entity) . ", refused", LOG_ERR);
+		dol_syslog("Peppol webhook - Document $documentId is not addressed to the Peppol ID of entity " . ((int) $conf->entity) . ", refused", LOG_ERR);
 		throw new \Exception("Receiver does not match this entity");
 	}
 
@@ -338,7 +338,7 @@ function handleOutboundStatusUpdate($db, $headers, $payload)
 	// and update a status field
 
 	if ($status === 'Error' && !empty($errorMessage)) {
-		dol_syslog("Peppol webhook - Outbound error: $errorMessage", LOG_ERR);
+		dol_syslog("Peppol webhook - Outbound error reported for document $documentId", LOG_ERR);
 		// TODO: Create a notification or event for the user
 	}
 }
@@ -359,7 +359,7 @@ function handleSalesInvoiceSendStatus($db, $headers, $payload)
 		throw new \Exception("Invalid payload for sales invoice send status");
 	}
 
-	dol_syslog("Peppol webhook - Sales invoice send status update: " . json_encode($data), LOG_INFO);
+	dol_syslog("Peppol webhook - Sales invoice send status update received", LOG_INFO);
 
 	// TODO: Process sales invoice send status
 }
@@ -380,7 +380,7 @@ function handlePurchaseInvoiceNew($db, $headers, $payload)
 	$totalInclVat = $headers['x-scrada-total-incl-vat'] ?? '';
 	$isCreditNote = ($headers['x-scrada-credit-invoice'] ?? 'false') === 'true';
 
-	dol_syslog("Peppol webhook - New purchase invoice: $invoiceNumber from $supplierName", LOG_INFO);
+	dol_syslog("Peppol webhook - New purchase invoice received", LOG_INFO);
 
 	// This webhook includes all Peppol headers if it came via Peppol
 	// So you can reuse handleInboundDocument logic if needed

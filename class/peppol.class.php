@@ -99,7 +99,7 @@ class Peppol
 		$ret = 0;
 		$buyerIdent = null;
 		$objFacture = $this->_invoice; //migrating code from dolibar
-		dol_syslog("peppol:: makePDF for invoice " . json_encode($objFacture));
+		dol_syslog("peppol:: makePDF for invoice id=" . (is_object($objFacture) ? ((int) $objFacture->id) : 0));
 
 		//check module version vs last init version in database
 		if (isset($this->db)) {
@@ -207,9 +207,9 @@ class Peppol
 				}
 			}
 		} else {
-			dol_syslog("Peppol: getIdShippingContact " . json_encode($shippings));
+			dol_syslog("Peppol: no shipping contact");
 		}
-		dol_syslog("Peppol: shipping is " . json_encode($shipping));
+		dol_syslog("Peppol: shipping contact " . (is_object($shipping) ? "used" : "not used"));
 
 		//billing address could be a linked contact
 		$billings = $objFacture->getIdBillingContact();
@@ -228,9 +228,9 @@ class Peppol
 				}
 			}
 		} else {
-			dol_syslog("Peppol: getIdBillingContact " . json_encode($billings));
+			dol_syslog("Peppol: no billing contact");
 		}
-		dol_syslog("Peppol: billing is " . json_encode($billing));
+		dol_syslog("Peppol: billing contact " . (is_object($billing) ? "used" : "not used"));
 
 		//add more messages
 		foreach ($otherBaseErrorsToCheck as $key => $details) {
@@ -247,16 +247,14 @@ class Peppol
 		$objFacture->fetch_thirdparty();
 		// Force load extrafields - array_options may be empty array even after fetch_thirdparty
 		$objFacture->thirdparty->fetch_optionals();
-		dol_syslog("Peppol: thirdparty array_options after fetch_optionals = " . json_encode($objFacture->thirdparty->array_options));
 		if (!empty($objFacture->thirdparty->array_options['options_peppol_id'])) {
-			dol_syslog("Peppol: specific peppol id " . json_encode($objFacture->thirdparty->array_options['options_peppol_id']));
+			dol_syslog("Peppol: thirdparty has a specific peppol id");
 			//9938:20225000264
 			if (strpos($objFacture->thirdparty->array_options['options_peppol_id'], ':')) {
 				$code = explode(':', $objFacture->thirdparty->array_options['options_peppol_id']);
-				dol_syslog("Peppol: buyer Ident code is " . json_encode($code));
 				if (!empty($code[0]) && !empty($code[1])) {
 					$buyerIdent = new Identifier($code[1], $code[0]);
-					dol_syslog("Peppol: buyer Ident is now " . json_encode($buyerIdent));
+					dol_syslog("Peppol: buyer Ident set from the specific peppol id");
 				} else {
 					if (empty($code[0])) {
 						$baseErrors[] = $langs->trans("PeppolCheckErrorCustomerPeppolIDpartA");
@@ -333,7 +331,6 @@ class Peppol
 				$delivery->setPostalCode($objFacture->thirdparty->zip);
 			}
 		}
-		dol_syslog("Peppol: delivery is " . json_encode($delivery));
 
 		// Create PEPPOL invoice instance
 		$inv = new Invoice(Presets\Peppol::class);
@@ -403,7 +400,6 @@ class Peppol
 			$seller->setPostalCode($mysoc->zip);
 		}
 		$inv->setSeller($seller);
-		dol_syslog("Peppol: seller is " . json_encode($seller));
 
 		// Si Bénéficiaire <=> vendeur ?
 		//$inv->setPayee($seller);
@@ -543,7 +539,6 @@ class Peppol
 			}
 		}
 		$inv->setBuyer($buyer);
-		dol_syslog("Peppol: buyer is " . json_encode($buyer));
 
 		//Inversion Purchase / Sales - vu juin 2023
 		$buyerReference = "no buyer ref.";
@@ -596,7 +591,6 @@ class Peppol
 			$bank = new \Account($this->db);
 			$bankres = $bank->fetch($bankid);
 			if ($bankres) {
-				dol_syslog("peppol bank : " . json_encode($bank));
 				// mode_reglement
 				if ($objFacture->mode_reglement_code == "VIR" && empty($bank->iban)) {
 					$baseErrors[] = $langs->trans("BankAccountLinkedWithoutIBAN") . "<br />";
@@ -721,7 +715,7 @@ class Peppol
 			//do not add empty lines in XML file (cleaner)
 			//note: it remove subtotal lines from ATM plugin for example
 			if (empty($description) && $subprice == 0) {
-				dol_syslog("Peppol : empty line (" . json_encode($line) . "), next");
+				dol_syslog("Peppol : empty line (id=" . ((int) ($line->id ?? 0)) . "), next");
 				continue;
 			}
 
@@ -1058,9 +1052,10 @@ class Peppol
 
 		$url = $apiUrl . '?' . http_build_query($params);
 
+		// getURLContent() passes these to CURLOPT_HTTPHEADER, which expects "Name: value" lines
 		$headers = [
-			'Accept' => 'application/json',
-			'User-Agent' => 'Dolibarr-PEPPOL-Module'
+			'Accept: application/json',
+			'User-Agent: Dolibarr-PEPPOL-Module'
 		];
 
 		// Use Dolibarr's getURLContent function

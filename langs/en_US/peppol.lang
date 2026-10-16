@@ -139,6 +139,13 @@ peppolName = Name
 peppolCountryCode = Country
 peppolDocumentTypes = Accepted document types
 peppolAction = Action
+peppolSearchQueryPlaceholder = Company name, VAT number or registration number
+peppolSearchedBy = searched by %s
+peppolSearchCriterion_vat = VAT number
+peppolSearchCriterion_profid1 = registration number (e.g. KvK)
+peppolSearchCriterion_name = name
+peppolDirectoryNotFound = No participant found in the Peppol directory. Try another name, VAT number or registration number.
+SearchQuery = Search
 peppolIdSet = Peppol identifier configured
 PeppolErrorNeedPDF = The invoice PDF file does not seem to be present!
 

@@ -118,7 +118,7 @@ class ActionsPeppolpeppyrus
 		global $conf, $user, $langs, $db;
 
 		$error = 0;
-		dol_syslog(get_class($this) . '::doMassActions peppolpeppyrus' . json_encode($parameters));
+		dol_syslog(get_class($this) . '::doMassActions peppolpeppyrus massaction=' . ($parameters['massaction'] ?? ''));
 
 		$contextArray = explode(':', $parameters['context']);
 		if (in_array('invoicelist', $contextArray)) {
@@ -170,7 +170,7 @@ class ActionsPeppolpeppyrus
 	{
 		global $conf, $user, $langs;
 		$langs->load("peppol@peppolpeppyrus");
-		dol_syslog(get_class($this) . '::addMoreMassActions peppolpeppyrus' . json_encode($parameters));
+		dol_syslog(get_class($this) . '::addMoreMassActions peppolpeppyrus');
 
 		$error = 0;
 		$disabled = 0;
