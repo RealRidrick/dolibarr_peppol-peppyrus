@@ -68,3 +68,11 @@ PEPPOL_AP_WEBHOOK_KEY=Cheie secretă webhook
 PEPPOL_AP_WEBHOOK_KEYTooltip=Cheie secretă pentru verificarea semnăturii (HMAC) apelurilor webhook. Fără această cheie, webhook-ul refuză orice apel.
 PeppolSecretConfigured=Configurată (ascunsă)
 PeppolSecretKeepCurrent=Lăsați gol pentru a păstra cheia actuală
+
+# Peppol directory search
+peppolSearchQueryPlaceholder=Denumire, cod TVA sau număr de înregistrare
+peppolSearchedBy=căutare după %s
+peppolSearchCriterion_vat=cod TVA
+peppolSearchCriterion_profid1=număr de înregistrare
+peppolSearchCriterion_name=denumire
+SearchQuery=Căutare

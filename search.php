@@ -64,7 +64,8 @@ $langs->loadLangs(array("peppol@peppolpeppyrus", "companies"));
 
 // Get parameters
 $action = GETPOST('action', 'aZ09');
-$search_query = GETPOST('search_query', 'aZ09');
+// alphanohtml: names contain spaces and dots ("MKB ONDERNEMERS B.V."), aZ09 would empty them
+$search_query = trim(GETPOST('search_query', 'alphanohtml'));
 $socid = GETPOST('socid', 'int');
 
 // Security check
@@ -80,13 +81,8 @@ if ($socid > 0) {
 		$thirdparty = null;
 	} else {
 		if ($action == "") {
-			dol_syslog("peppol : Load socid " . $socid . " success ...");
-
-			if (!empty($thirdparty->tva_intra)) {
-				$search_query = strtoupper(preg_replace('/[^A-Z0-9]/', '', $thirdparty->tva_intra));
-			}
-			$action = 'search';
-			dol_syslog("peppol : action " . $action . " search=" . $search_query);
+			// Opened from the third party card: search automatically
+			$action = 'autosearch';
 		}
 	}
 }
@@ -95,10 +91,27 @@ if ($socid > 0) {
  * Actions
  */
 
-if ($action == 'search' && !empty($search_query)) {
-	dol_syslog("Peppol search query is " . json_encode($search_query));
+// Note: never log names, VAT numbers, registration numbers or Peppol IDs, only the criterion and the number of results
+$searchResults = null;
+$searchCriterion = '';
+if ($action == 'autosearch' && $thirdparty) {
+	// Many participants (e.g. Dutch companies, scheme 0106 KvK) are registered with their registration number,
+	// not with their VAT number: try VAT number, then registration number (professional ID 1), then name.
+	foreach (peppolDirectorySearchCandidates($thirdparty) as $criterion => $query) {
+		$res = Peppol::searchPeppolDirectory($query);
+		$searchResults = $res;
+		$search_query = $query;
+		$searchCriterion = $criterion;
+		$nb = (is_array($res) && isset($res['matches']) && is_array($res['matches'])) ? count($res['matches']) : 0;
+		dol_syslog("Peppol directory search by " . $criterion . ": " . (isset($res['error']) ? 'error' : $nb . ' result(s)'));
+		if (isset($res['error']) || $nb > 0) {
+			break;
+		}
+	}
+} elseif ($action == 'search' && $search_query !== '') {
 	$searchResults = Peppol::searchPeppolDirectory($search_query);
-	dol_syslog("Peppol search result is " . json_encode($searchResults));
+	$nb = (is_array($searchResults) && isset($searchResults['matches']) && is_array($searchResults['matches'])) ? count($searchResults['matches']) : 0;
+	dol_syslog("Peppol directory search by manual query: " . (isset($searchResults['error']) ? 'error' : $nb . ' result(s)'));
 }
 
 // Auto-detect PEPPOL ID by VAT using Access Point API (Peppyrus bestMatch)
@@ -113,7 +126,7 @@ if ($action == 'autodetect' && $socid > 0 && $thirdparty) {
 		$result = $ap->findPeppolIdByVat($vatNumber, $countryCode);
 		if (is_array($result) && isset($result['participantId'])) {
 			$autoDetectedId = $result['participantId'];
-			dol_syslog("Peppol autodetect found: " . $autoDetectedId);
+			dol_syslog("Peppol autodetect found a participant");
 		}
 	} else {
 		setEventMessage($langs->trans('peppolAutoDetectNotAvailable'), 'warnings');
@@ -182,17 +195,20 @@ if ($thirdparty && $thirdparty->id > 0) {
 	print load_fiche_titre($langs->trans("peppolFindPeppolIDPopupTitle") . ' - ' . dol_escape_htmltag($thirdparty->name), '', 'peppol@peppolpeppyrus');
 } else {
 	print load_fiche_titre($title, '', 'peppol@peppolpeppyrus');
-	// Only show search form if no thirdparty context
-	print '<table class="border centpercent">';
-	print '<tr><td class="fieldrequired titlefield">' . $langs->trans("SearchQuery") . '</td>';
-	print '<td>';
-	print '<input type="text" name="search_query" size="50" value="' . dol_escape_htmltag($search_query) . '" placeholder="' . $langs->trans("CompanyName") . ' / VAT / SIREN...">';
-	print '</td></tr>';
-	print '</table>';
-	print '<div class="center" style="margin-top: 10px;">';
-	print '<input type="submit" class="button" value="' . $langs->trans("Search") . '">';
-	print '</div>';
 }
+// Search form, also from the third party card, so another name or number can be tried
+print '<table class="border centpercent">';
+print '<tr><td class="fieldrequired titlefield">' . $langs->trans("SearchQuery") . '</td>';
+print '<td>';
+print '<input type="text" name="search_query" size="50" value="' . dol_escape_htmltag($search_query) . '" placeholder="' . dol_escape_htmltag($langs->trans("peppolSearchQueryPlaceholder")) . '">';
+if ($searchCriterion !== '') {
+	print ' <span class="opacitymedium">' . $langs->trans("peppolSearchedBy", $langs->transnoentitiesnoconv("peppolSearchCriterion_" . $searchCriterion)) . '</span>';
+}
+print '</td></tr>';
+print '</table>';
+print '<div class="center" style="margin-top: 10px;">';
+print '<input type="submit" class="button" value="' . $langs->trans("Search") . '">';
+print '</div>';
 
 print '</form>';
 

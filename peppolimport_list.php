@@ -316,7 +316,7 @@ if (empty($reshook)) {
 		}
 		$importHtml .= "</tbody>";
 		$importHtml .= "</table></div>";
-		dol_syslog("PeppolImport : Import Now returns " . json_encode($res));
+		dol_syslog("PeppolImport : Import Now done");
 	}
 }
 

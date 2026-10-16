@@ -142,6 +142,12 @@ peppolName = Nom
 peppolCountryCode = Pays
 peppolDocumentTypes = Type de documents acceptés
 peppolAction = Action
+peppolSearchQueryPlaceholder = Raison sociale, numéro de TVA ou SIREN
+peppolSearchedBy = recherche par %s
+peppolSearchCriterion_vat = numéro de TVA
+peppolSearchCriterion_profid1 = numéro d'immatriculation (SIREN...)
+peppolSearchCriterion_name = nom
+SearchQuery = Recherche
 peppolIdSet = Identifiant Peppol configuré
 PeppolErrorNeedPDF = Le fichier PDF de la facture ne semble pas être présent !
 

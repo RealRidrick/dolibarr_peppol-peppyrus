@@ -68,3 +68,11 @@ PEPPOL_AP_WEBHOOK_KEY=Chiave segreta webhook
 PEPPOL_AP_WEBHOOK_KEYTooltip=Chiave segreta per verificare la firma (HMAC) delle chiamate webhook. Senza questa chiave il webhook rifiuta ogni chiamata.
 PeppolSecretConfigured=Configurata (nascosta)
 PeppolSecretKeepCurrent=Lasciare vuoto per mantenere la chiave attuale
+
+# Peppol directory search
+peppolSearchQueryPlaceholder=Ragione sociale, partita IVA o numero di registro
+peppolSearchedBy=ricerca per %s
+peppolSearchCriterion_vat=partita IVA
+peppolSearchCriterion_profid1=numero di registro
+peppolSearchCriterion_name=nome
+SearchQuery=Ricerca

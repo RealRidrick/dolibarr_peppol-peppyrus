@@ -100,7 +100,7 @@ if ($action == 'search') {
 
 		if (!empty($params)) {
 			$searchResults = $ap->searchPeppolDirectory($params);
-			dol_syslog("Peppol directory search result: " . json_encode($searchResults));
+			dol_syslog("Peppol directory search: " . (is_array($searchResults) && isset($searchResults['matches']) && is_array($searchResults['matches']) ? count($searchResults['matches']) . ' result(s)' : 'no usable result'));
 		} else {
 			setEventMessage($langs->trans('peppolSearchErrorNoParams'), 'warnings');
 		}
