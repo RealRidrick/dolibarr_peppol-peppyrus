@@ -75,4 +75,5 @@ peppolSearchedBy=búsqueda por %s
 peppolSearchCriterion_vat=NIF-IVA
 peppolSearchCriterion_profid1=número de registro
 peppolSearchCriterion_name=nombre
+peppolDirectoryNotFound=No se encontró ningún participante en el directorio Peppol. Pruebe otro nombre, NIF-IVA o número de registro.
 SearchQuery=Búsqueda

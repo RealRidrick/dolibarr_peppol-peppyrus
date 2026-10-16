@@ -211,6 +211,7 @@ peppolSearchedBy = gezocht op %s
 peppolSearchCriterion_vat = btw-nummer
 peppolSearchCriterion_profid1 = KvK-nummer (of ander inschrijvingsnummer)
 peppolSearchCriterion_name = naam
+peppolDirectoryNotFound = Geen deelnemer gevonden in de Peppol-directory. Probeer een andere naam, een btw-nummer of een KvK-nummer.
 peppolIdSet = Peppol-ID ingesteld
 peppolAutoDetectNotAvailable = Automatisch zoeken is bij dit accesspoint niet beschikbaar
 peppolSearchErrorNoParams = Vul ten minste één zoekcriterium in

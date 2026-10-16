@@ -288,7 +288,7 @@ if (!empty($searchResults)) {
 				print '</div>';
 			}
 		} else {
-			print '<div class="warning" style="margin-top: 20px;">' . $langs->trans("peppolBestMatchNotFound") . '</div>';
+			print '<div class="warning" style="margin-top: 20px;">' . $langs->trans("peppolDirectoryNotFound") . '</div>';
 		}
 	} else {
 		print '<div class="warning">' . $langs->trans("InvalidResponse") . '</div>';
