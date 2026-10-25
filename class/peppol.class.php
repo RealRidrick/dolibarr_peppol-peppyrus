@@ -97,6 +97,12 @@ class Peppol
 
 		$enableVatForThatInvoice = true;
 		$ret = 0;
+		// VAT category of 0% lines (see the loop on the lines): reverse charge (AE), intra-community supply (K),
+		// exempt supply (E, with PEPPOL_VAT_EXEMPT_CODE) or not subject to VAT (O)
+		$enableVatReverseChargeForThatInvoice = false;
+		$isIntraCommunity = false;
+		$vatExemptCode = '';
+		$vatExemptReason = '';
 		$buyerIdent = null;
 		$objFacture = $this->_invoice; //migrating code from dolibar
 		dol_syslog("peppol:: makePDF for invoice id=" . (is_object($objFacture) ? ((int) $objFacture->id) : 0));
@@ -132,6 +138,17 @@ class Peppol
 		// 	$objFacture->lines[0]
 		// );
 
+
+		// Reverse charge: set on the invoice (Dolibarr 20 and later) or on the customer
+		$enableVatReverseChargeForThatInvoice = (property_exists($objFacture, 'vat_reverse_charge') && !empty($objFacture->vat_reverse_charge))
+			|| !empty($objFacture->thirdparty->vat_reverse_charge);
+		// Intra-community supply: buyer in another EU member state than the seller
+		require_once DOL_DOCUMENT_ROOT . '/core/lib/company.lib.php';
+		$isIntraCommunity = ((string) $objFacture->thirdparty->country_code !== '' && (string) $objFacture->thirdparty->country_code !== (string) $mysoc->country_code
+			&& isInEEC($objFacture->thirdparty) && isInEEC($mysoc));
+		// Exemption reason for exempt supplies (category E); empty = old behaviour, category O
+		$vatExemptCode = peppolVatExemptCode();
+		$vatExemptReason = ($vatExemptCode !== '') ? PeppolVatExemption::VAT_EXEMPT_CODES[$vatExemptCode] : '';
 
 		if ($objFacture->thirdparty->tva_assuj != '1') {
 			dol_syslog("peppol:: makePDF for a non VAT concerned thirdpart, tva_assuj=" . $objFacture->thirdparty->tva_assuj);
@@ -793,16 +810,24 @@ class Peppol
 					- Categories E, AE : pas de taux mais motif d'exoneration requis (BT-120)
 					- Categorie K : taux = 0% obligatoire + motif d'exoneration
 				*/
-				if ($enableVatReverseChargeForThatInvoice || $objFacture->thirdparty->vat_reverse_charge) {
+				if ($enableVatReverseChargeForThatInvoice) {
 					$peppolLine
 						->setVatCategory('AE')
 						->setVatExemptionReasonCode('VATEX-EU-AE')
-						->setVatExemptionReason('Reverse Carge');
-				} elseif ($enableVatForThatInvoice) {
+						->setVatExemptionReason('Reverse charge');
+				} elseif ($enableVatForThatInvoice && $isIntraCommunity) {
+					// Category K only for a VAT registered buyer in another EU member state (BR-IC rules)
 					$peppolLine
 						->setVatCategory('K')
 						->setVatExemptionReasonCode('VATEX-EU-IC')
 						->setVatExemptionReason('VAT exempt for EEA intra-community supply of goods and services');
+				} elseif ($vatExemptCode !== '') {
+					// Exempt supply (for example medical or home care, article 132 of Directive 2006/112/EC):
+					// category E with the exemption reason; the VAT numbers of seller and buyer stay on the invoice
+					$peppolLine
+						->setVatCategory('E')
+						->setVatExemptionReasonCode($vatExemptCode)
+						->setVatExemptionReason($vatExemptReason);
 				} else {
 					//Tax Category O MUST be used when exemption reason code is VATEX-EU-O
 					//note La catégorie "O" (Not subject to VAT) est très restrictive dans PEPPOL. Elle est réservée aux opérations totalement hors du champ d'application de la TVA, par exemple :

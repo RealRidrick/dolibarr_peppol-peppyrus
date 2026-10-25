@@ -282,3 +282,8 @@ peppolScheme9951 = VAT number (SM)
 peppolScheme9952 = VAT number (TR)
 peppolScheme9953 = VAT number (VA)
 peppolScheme9957 = VAT number (FR)
+
+# 2.5.0
+PEPPOL_VAT_EXEMPT_CODE = VAT on 0% lines (exempt supplies)
+PEPPOL_VAT_EXEMPT_CODETooltip = For an invoice line at 0% VAT that is not reverse charge and not an intra-community supply: the exemption reason sent with VAT category E (exempt). Medical care such as district nursing: VATEX-EU-132-1C; home help and other welfare work: VATEX-EU-132-1G. Choose "Not subject to VAT" for the old behaviour (category O, VAT numbers left out).
+PeppolVatCategoryO = Not subject to VAT (category O, old behaviour)

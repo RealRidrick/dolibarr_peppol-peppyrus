@@ -152,6 +152,112 @@ function peppolThirdpartyBackUrl($socid, $backto)
 }
 
 /**
+ * Exemption reasons that can be chosen for exempt supplies (VAT category E), with the setting
+ * PEPPOL_VAT_EXEMPT_CODE. 'O' keeps the old behaviour: category O (not subject to VAT).
+ *
+ * @return	array<string,string>	code => description
+ */
+function peppolVatExemptChoices()
+{
+	dol_include_once('/peppolpeppyrus/class/peppolvatexemption.class.php');
+	$choices = array();
+	foreach (\custom\peppolpeppyrus\PeppolVatExemption::VAT_EXEMPT_CODES as $code => $label) {
+		if (strpos($code, 'VATEX-EU-132') === 0) {
+			$choices[$code] = $label;
+		}
+	}
+	return $choices;
+}
+
+/**
+ * Exemption reason code for exempt supplies from the setting, or '' for category O (old behaviour).
+ * Default: VATEX-EU-132-1C (medical care by medical professions, for example district nursing).
+ *
+ * @return	string
+ */
+function peppolVatExemptCode()
+{
+	$code = getDolGlobalString('PEPPOL_VAT_EXEMPT_CODE', 'VATEX-EU-132-1C');
+	$choices = peppolVatExemptChoices();
+	return isset($choices[$code]) ? $code : '';
+}
+
+/**
+ * HTTPS request to the Peppyrus API, without Dolibarr's getURLContent().
+ *
+ * getURLContent() writes the headers it sent into the Dolibarr log ("request without content body",
+ * Dolibarr 24), and the X-Api-Key header is among them. This function sends the same request with curl
+ * and logs only the method, the host and the HTTP code: never headers, query string or content.
+ * Only the Peppyrus hosts are allowed, over HTTPS with certificate verification, and redirects are not
+ * followed (the API key would go along with them). The proxy settings of Dolibarr (MAIN_PROXY_*) are used.
+ *
+ * @param	string		$url		Full URL (https://api.peppyrus.be/... or https://api.test.peppyrus.be/...)
+ * @param	string		$method		GET, POST, PATCH, PUT or DELETE
+ * @param	string		$body		Request body ('' for none)
+ * @param	string[]	$headers	Header lines "Name: value"
+ * @return	array{http_code:int, content:string, curl_error_no:int, curl_error_msg:string}	Same keys as getURLContent()
+ */
+function peppolApiRequest($url, $method, $body, $headers)
+{
+	$result = array('http_code' => 0, 'content' => '', 'curl_error_no' => 0, 'curl_error_msg' => '');
+	$parts = parse_url((string) $url);
+	$host = is_array($parts) ? strtolower((string) ($parts['host'] ?? '')) : '';
+	if (!is_array($parts) || ($parts['scheme'] ?? '') !== 'https' || !in_array($host, array('api.peppyrus.be', 'api.test.peppyrus.be'), true)
+		|| isset($parts['user']) || isset($parts['port']) || !in_array($method, array('GET', 'POST', 'PATCH', 'PUT', 'DELETE'), true)) {
+		dol_syslog('peppolApiRequest refused: not an HTTPS request to the Peppyrus API', LOG_ERR);
+		$result['curl_error_no'] = -1;
+		$result['curl_error_msg'] = 'Request refused (only HTTPS to the Peppyrus API)';
+		return $result;
+	}
+	if (!function_exists('curl_init')) {
+		$result['curl_error_no'] = -2;
+		$result['curl_error_msg'] = 'PHP curl extension is missing';
+		return $result;
+	}
+
+	$ch = curl_init($url);
+	$options = array(
+		CURLOPT_RETURNTRANSFER => true,
+		CURLOPT_FOLLOWLOCATION => false,
+		CURLOPT_SSL_VERIFYPEER => true,
+		CURLOPT_SSL_VERIFYHOST => 2,
+		CURLOPT_CONNECTTIMEOUT => max(1, getDolGlobalInt('MAIN_USE_CONNECT_TIMEOUT', 10)),
+		CURLOPT_TIMEOUT => max(1, getDolGlobalInt('MAIN_USE_RESPONSE_TIMEOUT', 30)),
+		CURLOPT_CUSTOMREQUEST => $method,
+		CURLOPT_HTTPHEADER => $headers,
+		CURLOPT_USERAGENT => 'Dolibarr peppolpeppyrus',
+	);
+	if (defined('CURLOPT_PROTOCOLS_STR')) {
+		$options[CURLOPT_PROTOCOLS_STR] = 'https';
+	} else {
+		$options[CURLOPT_PROTOCOLS] = CURLPROTO_HTTPS;
+	}
+	if ($method !== 'GET' && $method !== 'DELETE') {
+		$options[CURLOPT_POSTFIELDS] = (string) $body;
+	}
+	if (getDolGlobalString('MAIN_PROXY_USE')) {
+		$options[CURLOPT_PROXY] = getDolGlobalString('MAIN_PROXY_HOST').':'.getDolGlobalString('MAIN_PROXY_PORT');
+		if (getDolGlobalString('MAIN_PROXY_USER')) {
+			$options[CURLOPT_PROXYUSERPWD] = getDolGlobalString('MAIN_PROXY_USER').':'.getDolGlobalString('MAIN_PROXY_PASS');
+		}
+	}
+	curl_setopt_array($ch, $options);
+	$response = curl_exec($ch);
+	$result['http_code'] = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+	$result['curl_error_no'] = (int) curl_errno($ch);
+	$result['curl_error_msg'] = (string) curl_error($ch);
+	$result['content'] = is_string($response) ? $response : '';
+	if (PHP_VERSION_ID < 80000) {
+		curl_close($ch);
+	}
+	unset($options, $headers);
+
+	dol_syslog('peppolApiRequest '.$method.' '.$host.' HTTP '.$result['http_code'].($result['curl_error_no'] ? ' curl error '.$result['curl_error_no'] : ''));
+
+	return $result;
+}
+
+/**
  * Check the anti-CSRF token of a request that changes data through a link (GET)
  *
  * @return	bool	true if the token sent with the request is the current session token

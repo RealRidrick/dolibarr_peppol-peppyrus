@@ -64,7 +64,7 @@ class Peppyrus extends PeppolAP
 	/**
 	 * Handle API response with proper error codes
 	 *
-	 * @param   array   $result   CURL result from getURLContent
+	 * @param   array   $result   Result of peppolApiRequest() (same keys as getURLContent())
 	 * @param   string  $context  Method name for logging
 	 *
 	 * @return  array   ['success' => bool, 'data' => mixed, 'error_code' => int, 'error_msg' => string]
@@ -291,7 +291,7 @@ class Peppyrus extends PeppolAP
 		$headers = [];
 		$headers[] = 'X-Api-Key: ' . $apiKey;
 
-		$result = getURLContent($url, 'GET', '', 1, $headers, array('https'));
+		$result = peppolApiRequest($url, 'GET', '', $headers);
 
 		dol_syslog("Peppyrus::checkAccessPoint HTTP code " . ($result['http_code'] ?? 'unknown'));
 
@@ -407,7 +407,7 @@ class Peppyrus extends PeppolAP
 
 		$body = json_encode($data);
 
-		$result = getURLContent($url, 'POST', $body, 1, $headers, array('https'));
+		$result = peppolApiRequest($url, 'POST', $body, $headers);
 
 		dol_syslog("Peppyrus::sendToAccessPoint HTTP code " . ($result['http_code'] ?? 'unknown'));
 
@@ -485,7 +485,7 @@ class Peppyrus extends PeppolAP
 		$headers = [];
 		$headers[] = 'X-Api-Key: ' . $apiKey;
 
-		$result = getURLContent($url, 'GET', '', 1, $headers, array('https'));
+		$result = peppolApiRequest($url, 'GET', '', $headers);
 
 		dol_syslog("Peppyrus::checkThirdparty HTTP code " . ($result['http_code'] ?? 'unknown'));
 
@@ -547,7 +547,7 @@ class Peppyrus extends PeppolAP
 		$headers = [];
 		$headers[] = 'X-Api-Key: ' . $apiKey;
 
-		$result = getURLContent($url, 'GET', '', 1, $headers, array('https'));
+		$result = peppolApiRequest($url, 'GET', '', $headers);
 
 		dol_syslog("Peppyrus::getSupplierInvoicesList HTTP code " . ($result['http_code'] ?? 'unknown'));
 
@@ -644,7 +644,7 @@ class Peppyrus extends PeppolAP
 		$headers = [];
 		$headers[] = 'X-Api-Key: ' . $apiKey;
 
-		$result = getURLContent($url, 'GET', '', 1, $headers, array('https'));
+		$result = peppolApiRequest($url, 'GET', '', $headers);
 
 		dol_syslog("Peppyrus::getSupplierInvoice CURL result code: " . ($result['http_code'] ?? 'unknown'));
 
@@ -743,7 +743,7 @@ class Peppyrus extends PeppolAP
 		$headers = [];
 		$headers[] = 'X-Api-Key: ' . $apiKey;
 
-		$result = getURLContent($url, 'PATCH', '', 1, $headers, array('https'));
+		$result = peppolApiRequest($url, 'PATCH', '', $headers);
 
 		dol_syslog("Peppyrus::confirmSupplierInvoice HTTP code " . ($result['http_code'] ?? 'unknown'));
 
@@ -830,7 +830,7 @@ class Peppyrus extends PeppolAP
 		$headers = [];
 		$headers[] = 'X-Api-Key: ' . $apiKey;
 
-		$result = getURLContent($url, 'GET', '', 1, $headers, array('https'));
+		$result = peppolApiRequest($url, 'GET', '', $headers);
 
 		dol_syslog("Peppyrus::getMessageReport HTTP code " . ($result['http_code'] ?? 'unknown'));
 
@@ -882,7 +882,7 @@ class Peppyrus extends PeppolAP
 		$headers = [];
 		$headers[] = 'X-Api-Key: ' . $apiKey;
 
-		$result = getURLContent($url, 'GET', '', 1, $headers, array('https'));
+		$result = peppolApiRequest($url, 'GET', '', $headers);
 
 		dol_syslog("Peppyrus::findPeppolIdByVat HTTP code " . ($result['http_code'] ?? 'unknown'));
 
@@ -940,7 +940,7 @@ class Peppyrus extends PeppolAP
 		$headers = [];
 		$headers[] = 'X-Api-Key: ' . $apiKey;
 
-		$result = getURLContent($url, 'GET', '', 1, $headers, array('https'));
+		$result = peppolApiRequest($url, 'GET', '', $headers);
 
 		dol_syslog("Peppyrus::searchPeppolDirectory HTTP code " . ($result['http_code'] ?? 'unknown'));
 
@@ -980,7 +980,7 @@ class Peppyrus extends PeppolAP
 		$headers = [];
 		$headers[] = 'X-Api-Key: ' . $apiKey;
 
-		$result = getURLContent($url, 'GET', '', 1, $headers, array('https'));
+		$result = peppolApiRequest($url, 'GET', '', $headers);
 
 		dol_syslog("Peppyrus::getOrganizationPeppolInfo HTTP code " . ($result['http_code'] ?? 'unknown'));
 

@@ -275,3 +275,8 @@ peppolScheme9951 = Numéro de TVA (SM)
 peppolScheme9952 = Numéro de TVA (TR)
 peppolScheme9953 = Numéro de TVA (VA)
 peppolScheme9957 = Numéro de TVA (FR)
+
+# 2.5.0
+PEPPOL_VAT_EXEMPT_CODE = TVA sur les lignes à 0 % (opérations exonérées)
+PEPPOL_VAT_EXEMPT_CODETooltip = Pour une ligne à 0 % de TVA qui n'est ni en autoliquidation ni une livraison intracommunautaire : le motif d'exonération envoyé avec la catégorie de TVA E (exonéré). Soins médicaux : VATEX-EU-132-1C ; aide sociale : VATEX-EU-132-1G. Choisissez « Hors champ de la TVA » pour l'ancien comportement (catégorie O, sans numéros de TVA).
+PeppolVatCategoryO = Hors champ de la TVA (catégorie O, ancien comportement)
