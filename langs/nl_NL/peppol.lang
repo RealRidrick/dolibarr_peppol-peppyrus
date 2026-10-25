@@ -325,3 +325,8 @@ peppolScheme9951 = Btw-nummer (SM)
 peppolScheme9952 = Btw-nummer (TR)
 peppolScheme9953 = Btw-nummer (VA)
 peppolScheme9957 = Btw-nummer (FR)
+
+# 2.5.0
+PEPPOL_VAT_EXEMPT_CODE = Btw op regels van 0% (vrijgestelde prestaties)
+PEPPOL_VAT_EXEMPT_CODETooltip = Voor een factuurregel met 0% btw die geen verlegde btw en geen intracommunautaire levering is: de vrijstellingsgrond die met btw-categorie E (vrijgesteld) wordt meegestuurd. Medische zorg zoals wijkverpleging: VATEX-EU-132-1C; huishoudelijke hulp en ander maatschappelijk werk: VATEX-EU-132-1G. Kies "Niet onderworpen aan btw" voor de oude werking (categorie O, zonder btw-nummers).
+PeppolVatCategoryO = Niet onderworpen aan btw (categorie O, oude werking)

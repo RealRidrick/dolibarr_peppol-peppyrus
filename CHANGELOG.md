@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.5.0
+
+Security:
+
+- The Peppyrus API key no longer ends up in the Dolibarr log. All calls to Peppyrus went through `getURLContent()`, which logs the request headers it sent (Dolibarr 24: "request without content body"), including `X-Api-Key`. They now go through `peppolApiRequest()` (`lib/peppol.lib.php`): curl with HTTPS and certificate verification, only to `api.peppyrus.be` and `api.test.peppyrus.be`, no redirects (the key would go along), the proxy settings of Dolibarr, and in the log only method, host and HTTP code.
+
+VAT category of invoice lines at 0% VAT:
+
+- New setting "VAT on 0% lines (exempt supplies)" (`PEPPOL_VAT_EXEMPT_CODE`): the exemption reason sent with VAT category **E** (exempt), default `VATEX-EU-132-1C` (medical care by medical professions, for example district nursing); `VATEX-EU-132-1G` for home help and other welfare work. Before, such lines got category **O** (not subject to VAT) and the VAT numbers of seller and buyer were removed, which is wrong for exempt care. Choose "Not subject to VAT" for the old behaviour.
+- Category **K** (intra-community supply) is only used for a VAT registered buyer in another EU member state. Before, every VAT registered buyer got K, also a buyer in the same country.
+- Reverse charge (**AE**) used an undefined variable (PHP warning) and only looked at the customer; it now also uses the reverse charge setting of the invoice when the Dolibarr version has it. The reason text read "Reverse Carge" and now reads "Reverse charge".
+- Tested on Dolibarr 24: Dutch customer (E with VATEX-EU-132-1C, seller VAT number kept), Belgian customer (K), reverse charge customer (AE) and the old behaviour (O).
+
+**After updating:** check the setting on the setup page; nothing else.
+
 ## 2.4.2
 
 Peppol ID search results give enough information to choose:

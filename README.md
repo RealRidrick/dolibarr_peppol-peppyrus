@@ -143,6 +143,7 @@ Peppyrus provides a separate test environment for development and testing purpos
    - **PEPPOL_AP_API_KEY**: Production API key
    - **PEPPOL_AP_DEV_API_KEY**: Test/Development API key (formerly PEPPOL_AP_API_KEY_DEV, still read until saved again)
    - **PEPPOL_AP_WEBHOOK_KEY**: secret key for the webhook signature; without it the webhook refuses every call
+   - **PEPPOL_VAT_EXEMPT_CODE**: VAT category of invoice lines at 0% VAT that are not reverse charge and not an intra-community supply: category E with this exemption reason (default VATEX-EU-132-1C, medical care), or "Not subject to VAT" for category O
 
 ### Configuration for Testing
 

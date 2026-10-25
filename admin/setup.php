@@ -82,6 +82,14 @@ if ($action == 'update' && !empty($user->admin)) {
 		}
 	}
 
+	// VAT category of 0% lines: exemption reason (category E) or 'O' (not subject to VAT, old behaviour)
+	$exemptcode = GETPOST('PEPPOL_VAT_EXEMPT_CODE', 'alphanohtml');
+	if ($exemptcode !== 'O' && !array_key_exists($exemptcode, peppolVatExemptChoices())) {
+		$error++;
+	} elseif (!dolibarr_set_const($db, 'PEPPOL_VAT_EXEMPT_CODE', $exemptcode, 'chaine', 0, '', $conf->entity)) {
+		$error++;
+	}
+
 	// Update PEPPOL_PROD
 	$prod_mode = GETPOST('PEPPOL_PROD', 'int');
 	if (!dolibarr_set_const($db, 'PEPPOL_PROD', $prod_mode, 'chaine', 0, '', $conf->entity)) {
@@ -206,6 +214,19 @@ if ($action == 'edit') {
 	print '</td>';
 	print '</tr>';
 
+	// PEPPOL_VAT_EXEMPT_CODE
+	$curexempt = peppolVatExemptCode();
+	print '<tr class="oddeven">';
+	print '<td><label for="PEPPOL_VAT_EXEMPT_CODE">' . $langs->trans("PEPPOL_VAT_EXEMPT_CODE") . '</label>';
+	print '<br><span class="opacitymedium small">' . $langs->trans("PEPPOL_VAT_EXEMPT_CODETooltip") . '</span></td>';
+	print '<td><select name="PEPPOL_VAT_EXEMPT_CODE" id="PEPPOL_VAT_EXEMPT_CODE" class="flat minwidth400">';
+	print '<option value="O"' . ($curexempt === '' ? ' selected' : '') . '>' . dol_escape_htmltag($langs->trans("PeppolVatCategoryO")) . '</option>';
+	foreach (peppolVatExemptChoices() as $code => $label) {
+		print '<option value="' . dol_escape_htmltag($code) . '"' . ($curexempt === $code ? ' selected' : '') . '>' . dol_escape_htmltag($code . ' - ' . $label) . '</option>';
+	}
+	print '</select></td>';
+	print '</tr>';
+
 	print '</tbody>';
 	print '</table>';
 
@@ -294,6 +315,13 @@ if ($action == 'edit') {
 	print '<tr class="oddeven">';
 	print '<td>' . $langs->trans("PEPPOL_PROD") . '</td>';
 	print '<td>' . yn(getDolGlobalString('PEPPOL_PROD', '')) . '</td>';
+	print '</tr>';
+
+	// PEPPOL_VAT_EXEMPT_CODE
+	$curexempt = peppolVatExemptCode();
+	print '<tr class="oddeven">';
+	print '<td>' . $langs->trans("PEPPOL_VAT_EXEMPT_CODE") . '</td>';
+	print '<td>' . dol_escape_htmltag($curexempt !== '' ? 'E: ' . $curexempt . ' - ' . peppolVatExemptChoices()[$curexempt] : $langs->trans("PeppolVatCategoryO")) . '</td>';
 	print '</tr>';
 
 	print '</tbody>';
