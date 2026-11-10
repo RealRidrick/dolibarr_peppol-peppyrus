@@ -89,7 +89,7 @@ class ModPeppolpeppyrusTest extends TestCase
 	public function testOneMenuWithSubPages()
 	{
 		$mod = new modPeppolpeppyrus(null);
-		$this->assertCount(4, $mod->menu);
+		$this->assertCount(5, $mod->menu);
 		$parent = $mod->menu[0];
 		$this->assertSame('fk_mainmenu=billing', $parent['fk_menu']);
 		$this->assertSame('peppol', $parent['leftmenu']);
@@ -101,18 +101,21 @@ class ModPeppolpeppyrusTest extends TestCase
 			$this->assertSame(0, $entry['user']);
 			$urls[] = $entry['url'];
 		}
-		$this->assertSame(array('/peppolpeppyrus/peppolimport_list.php', '/peppolpeppyrus/peppol_candidates.php', '/peppolpeppyrus/peppol_list.php'), $urls);
+		$this->assertSame(array('/peppolpeppyrus/peppolimport_list.php', '/peppolpeppyrus/peppol_candidates.php', '/peppolpeppyrus/peppol_outgoing.php', '/peppolpeppyrus/peppol_list.php'), $urls);
 	}
 
 	/**
-	 * Scheduled jobs: weekly candidate check, daily fetch and automatic sending, each with an existing class and method
+	 * Scheduled jobs: weekly candidate check, daily fetch, automatic sending and (since 2.12.0) the daily check of failed
+	 * deliveries, each with an existing class and method
 	 *
 	 * @return void
 	 */
 	public function testCronJobs()
 	{
 		$mod = new modPeppolpeppyrus(null);
-		$this->assertCount(3, $mod->cronjobs);
+		$this->assertCount(4, $mod->cronjobs);
+		$this->assertSame('runDailyCheck', $mod->cronjobs[3]['method']);
+		$this->assertSame(1, $mod->cronjobs[3]['status']);
 		// Automatic sending is off by default
 		$this->assertSame('runAutoSend', $mod->cronjobs[2]['method']);
 		$this->assertSame(0, $mod->cronjobs[2]['status']);
