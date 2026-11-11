@@ -286,4 +286,106 @@ class PeppolLibTest extends TestCase
 		$this->assertSame('failed', peppolOutgoingStatus('x', $outbox, $failed));
 		$this->assertSame('sent', peppolOutgoingStatus('s', $outbox, $failed));
 	}
+
+	/**
+	 * Invoice Response (since 2.13.0): building, reading back, escaping and the checks on required data
+	 *
+	 * @return void
+	 */
+	public function testInvoiceResponse()
+	{
+		$p = array('id' => 'IR-12', 'date' => '2026-11-10', 'sender' => '0106:12345678', 'senderName' => 'Koper & Co', 'receiver' => 'iso6523-actorid-upis::0208:0475670182',
+			'receiverName' => 'Supplier <Ltd>', 'code' => 'RE', 'reason' => 'PRI', 'reasonText' => 'Price is wrong', 'invoiceId' => 'F2026-001', 'invoiceDate' => '2026-11-01');
+		$xml = peppolInvoiceResponseXml($p);
+		$this->assertStringContainsString('<cbc:CustomizationID>urn:fdc:peppol.eu:poacc:trns:invoice_response:3</cbc:CustomizationID>', $xml);
+		$this->assertStringContainsString('<cbc:EndpointID schemeID="0208">0475670182</cbc:EndpointID>', $xml);
+		$this->assertStringContainsString('Koper &amp; Co', $xml);
+		$this->assertStringContainsString('Supplier &lt;Ltd&gt;', $xml);
+		$this->assertStringContainsString('<cbc:StatusReasonCode listID="OPStatusReason">PRI</cbc:StatusReasonCode>', $xml);
+		$dom = new DOMDocument();
+		$this->assertTrue($dom->loadXML($xml));
+
+		$terug = peppolParseInvoiceResponse($xml);
+		$this->assertSame('RE', $terug['code']);
+		$this->assertSame('PRI', $terug['reason']);
+		$this->assertSame('Price is wrong', $terug['reasonText']);
+		$this->assertSame('F2026-001', $terug['invoiceId']);
+		$this->assertSame('0106:12345678', $terug['sender']);
+
+		// Accepting without reason is allowed, rejecting without reason is not; unknown code or reason is not
+		$ap = array_merge($p, array('code' => 'AP', 'reason' => '', 'reasonText' => ''));
+		$this->assertStringNotContainsString('cac:Status', peppolInvoiceResponseXml($ap));
+		$this->assertSame('', peppolInvoiceResponseXml(array_merge($ap, array('code' => 'RE'))));
+		$this->assertSame('', peppolInvoiceResponseXml(array_merge($p, array('code' => 'XX'))));
+		$this->assertSame('', peppolInvoiceResponseXml(array_merge($p, array('reason' => 'ZZZ'))));
+		$this->assertSame('', peppolInvoiceResponseXml(array_merge($p, array('sender' => '12345678'))));
+		$this->assertSame('', peppolInvoiceResponseXml(array_merge($p, array('invoiceDate' => '1-11-2026'))));
+
+		// Lezen: geen DOCTYPE, geen ander soort document
+		$this->assertNull(peppolParseInvoiceResponse('<?xml version="1.0"?><!DOCTYPE x><ApplicationResponse/>'));
+		$this->assertNull(peppolParseInvoiceResponse('<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"/>'));
+
+		$this->assertTrue(peppolSupportsInvoiceResponse((object) array('services' => array((object) array('documentType' => PEPPOL_IR_DOCTYPE)))));
+		$this->assertFalse(peppolSupportsInvoiceResponse(array('services' => array(array('documentType' => 'busdox-docid-qns::urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice')))));
+		$this->assertFalse(peppolSupportsInvoiceResponse(-404));
+	}
+
+	/**
+	 * Answer of the customer for the list Outgoing, and comparing Peppol IDs (2.13.0)
+	 *
+	 * @return void
+	 */
+	public function testResponseLevelAndParticipant()
+	{
+		$this->assertSame('read', peppolResponseLevel('AB'));
+		$this->assertSame('read', peppolResponseLevel('ip'));
+		$this->assertSame('approved', peppolResponseLevel('PD'));
+		$this->assertSame('query', peppolResponseLevel('UQ'));
+		$this->assertSame('rejected', peppolResponseLevel('RE'));
+		$this->assertSame('', peppolResponseLevel('XX'));
+		$this->assertTrue(peppolSameParticipant('iso6523-actorid-upis::0106:12345678', '0106:12345678'));
+		$this->assertTrue(peppolSameParticipant('0208:ABC', '0208:abc'));
+		$this->assertFalse(peppolSameParticipant('0106:12345678', '0106:87654321'));
+		$this->assertFalse(peppolSameParticipant('', ''));
+	}
+
+	/**
+	 * Received this month and a readable size (2.13.0)
+	 *
+	 * @return void
+	 */
+	public function testCountInMonthAndReadableSize()
+	{
+		$now = dol_mktime(12, 0, 0, 11, 11, 2026, 'gmt');
+		$list = array(
+			array('id' => 'a', 'created' => '2026-11-10T21:00:00+00:00'),
+			array('id' => 'b', 'created' => '2026-11-01 08:00:00'),
+			array('id' => 'c', 'created' => '2026-10-31T23:00:00+00:00'),
+			array('id' => 'd', 'created' => ''),
+		);
+		$this->assertSame(2, peppolCountInMonth($list, $now));
+		$this->assertSame(0, peppolCountInMonth(array(), $now));
+		$this->assertSame('0 B', peppolReadableSize(0));
+		$this->assertSame('25 GB', peppolReadableSize(26843545600));
+		$this->assertSame('512 B', peppolReadableSize(512));
+		$this->assertSame('2 KB', peppolReadableSize(2048));
+		$this->assertMatchesRegularExpression('/^1[.,]5 MB$/', peppolReadableSize(1572864));
+	}
+
+	/**
+	 * Default status filter of Incoming documents (2.13.0)
+	 *
+	 * @return void
+	 */
+	public function testInboxDefaultStatus()
+	{
+		$this->assertSame('open', peppolInboxDefaultStatus('open'));
+		$this->assertSame('', peppolInboxDefaultStatus('all'));
+		$this->assertSame('1', peppolInboxDefaultStatus('1'));
+		$this->assertSame('9', peppolInboxDefaultStatus('9'));
+		$this->assertSame('open', peppolInboxDefaultStatus('xyz'));
+		$this->assertSame('open', peppolInboxDefaultStatus(''));
+		$this->assertSame(array(0, 1, 3, 5), peppolInboxOpenStatuses());
+		$this->assertNotContains(2, peppolInboxOpenStatuses());
+	}
 }

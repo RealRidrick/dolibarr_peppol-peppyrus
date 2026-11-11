@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.13.0
+
+- **Reject an incoming invoice.** The card of an incoming Peppol document has a button **Reject**. You choose a reason (the Peppol code list: prices incorrect, quantity incorrect, other reason with an explanation, ...). The supplier receives an Invoice Response "Rejected" with that reason through Peppol (Peppol BIS 63). After that the document can no longer be booked. When the supplier cannot receive such a message (according to the Peppol directory), the rejection is only stored here, with a message to inform the supplier yourself. When Peppyrus returns an error, nothing changes and you can try again.
+- **Approval on booking.** After booking, the supplier receives an Invoice Response "Accepted", when the supplier can receive it. New setting **Send approval to the supplier on booking** (default on). When sending fails, the invoice is booked anyway, with a message. "Paid" is not sent.
+- The answer to the supplier (status, date, reason) is shown on the card of the document and in the Peppol log.
+- **Answers of customers to our invoices.** When a customer sends an Invoice Response, the daily job fetches it. It is linked to the own invoice with that number, only when the sender is the Peppol ID of that customer, and shown on the Peppol tab of the invoice. A rejection or a query also creates an agenda event. Such an answer no longer becomes an incoming document.
+- **Outgoing has a third tick:** three blue ticks when the customer received the invoice or has it in process, three green ticks when accepted or paid, an orange question mark on a query, a red cross when rejected by the customer. The reason is shown on hover. Only customers that send an Invoice Response give this third tick; Peppol does not require it.
+- **PDF from Peppyrus.** When an incoming invoice has no PDF, Peppyrus makes one of the invoice itself on booking (`render`), attached as `peppol-<ref>.pdf` to the supplier invoice.
+- **Credit notes of suppliers can be booked.** Book now turns a Peppol credit note into a supplier credit note of the credited supplier invoice (same supplier, invoice number from `BillingReference`). Lines and VAT come from the e-invoice; Dolibarr makes the amounts negative. It is validated when the total matches. Without that invoice, or without a reference, a message and nothing is created, unless `INVOICE_CREDIT_NOTE_STANDALONE` is on (the same rule as Dolibarr itself).
+- **Fixed: the card of an incoming document said "Access denied"** without the module Multicompany. The entity of the document was not read, so the entity check always refused.
+
+- **Incoming documents: status filter "To process"**, the default. It shows what is not booked or rejected yet (waiting, analyzed, error, partial). Booked documents are under Success, rejected ones under Canceled, the empty choice shows all. Choosing a status refreshes the list at once. New setting **Incoming documents show by default** (To process, a status, or All). The status "Waiting" is translated, and a canceled document shows "Canceled" instead of "Disabled".
+- **Peppyrus plan:** new line **Received this month** (the INBOX at Peppyrus, also messages already fetched; received messages do not count for the maximum). Storage is readable ("0 B of 25 GB" instead of bytes).
+
+**After updating:** disable and enable the module (Setup, Modules), so the new columns for the answer are added to the database. Without them the card of an incoming document gives an error.
+
 ## 2.12.0
 
 Compared with the Peppyrus API (`https://api.peppyrus.be/v1/openapi.json`).
