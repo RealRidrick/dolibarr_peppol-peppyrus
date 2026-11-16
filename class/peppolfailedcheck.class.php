@@ -120,28 +120,15 @@ class PeppolFailedCheck
 	private function agenda($fid, $text)
 	{
 		global $user, $langs;
-		if (!isModEnabled('agenda')) {
+		if (!peppolAgendaEnabled('AC_PEPPOL_FAILED')) {
 			return;
 		}
-		require_once DOL_DOCUMENT_ROOT.'/comm/action/class/actioncomm.class.php';
 		require_once DOL_DOCUMENT_ROOT.'/compta/facture/class/facture.class.php';
 		$invoice = new Facture($this->db);
 		if ($invoice->fetch($fid) <= 0) {
 			return;
 		}
-		$ac = new ActionComm($this->db);
-		$ac->type_code = 'AC_OTH_AUTO';
-		$ac->code = 'AC_PEPPOL_FAILED';
-		$ac->label = dol_trunc($langs->transnoentitiesnoconv('peppolSendFailedShort').' ('.$invoice->ref.')', 120, 'right', 'UTF-8', 1);
-		$ac->note_private = $text;
-		$ac->datep = dol_now();
-		$ac->userownerid = (int) $user->id;
-		$ac->percentage = -1;
-		$ac->socid = (int) $invoice->socid;
-		$ac->fk_element = (int) $fid;
-		$ac->elementtype = 'invoice';
-		if ($ac->create($user) < 0) {
-			dol_syslog('PeppolFailedCheck: agenda event failed: '.$ac->error, LOG_WARNING);
-		}
+		// Since 2.14.0 through the shared helper: can be switched on and off in Agenda > Setup (on by default)
+		peppolAgendaEvent($this->db, $user, 'AC_PEPPOL_FAILED', $langs->transnoentitiesnoconv('peppolSendFailedShort') . ' (' . $invoice->ref . ')', $text, (int) $invoice->socid, (int) $fid, 'invoice');
 	}
 }

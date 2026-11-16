@@ -163,7 +163,7 @@ if (in_array($action, array('link', 'ignore', 'restore')) && is_array($toselect)
 			}
 			$r = $check->link($candidateid, $user);
 			if ($r > 0) {
-				$linkedsoc[$socid] = true;
+				$linkedsoc[$socid] = $check->lastLinkedId;
 			}
 		} else {
 			$r = $check->setStatus($candidateid, ($action == 'ignore' ? PeppolCandidateCheck::STATUS_IGNORED : PeppolCandidateCheck::STATUS_NEW), $user);
@@ -181,6 +181,16 @@ if (in_array($action, array('link', 'ignore', 'restore')) && is_array($toselect)
 		setEventMessages($langs->trans('peppolCandidateActionError'), null, 'errors');
 	} else {
 		$db->commit();
+		// Since 2.14.0: after the commit an agenda event on each third party; with very many at once one summary event
+		if ($action == 'link' && count($linkedsoc) > 0) {
+			if (count($linkedsoc) > 200) {
+				peppolAgendaEvent($db, $user, 'AC_PEPPOL_ID_LINKED', $langs->transnoentitiesnoconv('peppolAgendaPeppolIdBulk', count($linkedsoc)), '');
+			} else {
+				foreach ($linkedsoc as $linkedsocid => $participant) {
+					peppolAgendaEvent($db, $user, 'AC_PEPPOL_ID_LINKED', $langs->transnoentitiesnoconv('peppolAgendaPeppolIdLinked'), $langs->transnoentitiesnoconv('peppolAgendaPeppolIdNote', $participant), (int) $linkedsocid);
+				}
+			}
+		}
 		setEventMessages($langs->trans('peppolCandidateActionDone_' . $action, $nbok), null, 'mesgs');
 		if ($nbskip > 0) {
 			setEventMessages($langs->trans('peppolCandidateActionSkipped', $nbskip), null, 'warnings');

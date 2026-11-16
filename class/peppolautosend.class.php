@@ -205,6 +205,10 @@ class PeppolAutoSend
 			dol_syslog('PeppolAutoSend::sendOne invoice ' . ((int) $id) . ' no Peppol file, skipped', LOG_WARNING);
 			return 0;
 		}
+		// For the note of the agenda event (since 2.14.0)
+		if (property_exists($ap, 'automatic')) {
+			$ap->automatic = true;
+		}
 		$res = $ap->sendToAccessPoint($file, $inv);
 		dol_syslog('PeppolAutoSend::sendOne invoice ' . ((int) $id) . ' result ' . ((int) $res));
 		return ($res > 0) ? 1 : -1;

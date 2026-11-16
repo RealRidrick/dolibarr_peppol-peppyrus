@@ -29,6 +29,8 @@ class Peppyrus extends PeppolAP
 
 	/** @var array{listed:int,new:int,retried:int,failed:int} Counts of the last getSupplierInvoicesList() (no names or ids) */
 	public $fetchStats = array('listed' => 0, 'new' => 0, 'retried' => 0, 'failed' => 0);
+	/** @var bool Sent by the scheduled job (since 2.14.0, for the note of the agenda event) */
+	public $automatic = false;
 	/** @var string[] */
 	public $setupNeeds = ['PEPPOL_AP_SENDER_ID', 'PEPPOL_AP_API_KEY', 'PEPPOL_PROD'];
 
@@ -352,7 +354,7 @@ class Peppyrus extends PeppolAP
 	 */
 	public function sendToAccessPoint($filename, $object)
 	{
-		global $langs;
+		global $langs, $user;
 
 		$ret = 0;
 
@@ -464,6 +466,18 @@ class Peppyrus extends PeppolAP
 				} else {
 					dol_syslog("Peppol update extrafields : can't get object->array_options['options_peppol_id'] !");
 				}
+
+				// Since 2.14.0: agenda event on the invoice and the customer, only after the successful answer
+				peppolAgendaEvent(
+					$this->db,
+					$user,
+					'AC_PEPPOL_SENT',
+					$langs->transnoentitiesnoconv('peppolAgendaSent', $object->ref),
+					$langs->transnoentitiesnoconv('peppolAgendaSentNote', peppolSanitizeIdentifier($json->id)) . "\n" . $langs->transnoentitiesnoconv($this->automatic ? 'peppolAgendaSentAuto' : 'peppolAgendaSentManual'),
+					(int) $object->socid,
+					(int) $object->id,
+					'invoice'
+				);
 
 				return 1;
 			} else {
@@ -768,24 +782,8 @@ class Peppyrus extends PeppolAP
 	private function agendaResponse($fid, $socid, $ref, $code, $text)
 	{
 		global $user, $langs;
-		if (!isModEnabled('agenda')) {
-			return;
-		}
-		require_once DOL_DOCUMENT_ROOT . '/comm/action/class/actioncomm.class.php';
-		$ac = new \ActionComm($this->db);
-		$ac->type_code = 'AC_OTH_AUTO';
-		$ac->code = 'AC_PEPPOL_IR_' . $code;
-		$ac->label = dol_trunc($langs->transnoentitiesnoconv($code === 'RE' ? 'peppolResponseRejectedShort' : 'peppolResponseQueryShort') . ' (' . $ref . ')', 120, 'right', 'UTF-8', 1);
-		$ac->note_private = $text;
-		$ac->datep = dol_now();
-		$ac->userownerid = (int) $user->id;
-		$ac->percentage = -1;
-		$ac->socid = (int) $socid;
-		$ac->fk_element = (int) $fid;
-		$ac->elementtype = 'invoice';
-		if ($ac->create($user) < 0) {
-			dol_syslog('Peppyrus::agendaResponse ' . $ac->error, LOG_WARNING);
-		}
+		// Since 2.14.0 through the shared helper: can be switched on and off in Agenda > Setup (on by default)
+		peppolAgendaEvent($this->db, $user, 'AC_PEPPOL_IR_' . $code, $langs->transnoentitiesnoconv($code === 'RE' ? 'peppolResponseRejectedShort' : 'peppolResponseQueryShort') . ' (' . $ref . ')', $text, (int) $socid, (int) $fid, 'invoice');
 	}
 
 	/**

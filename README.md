@@ -116,6 +116,10 @@ On the card of an incoming document, **Reject** asks a reason and sends the supp
 
 A daily scheduled job ("Peppol: daily check of invoices the access point could not deliver") reads the folder FAILED at Peppyrus. For each own invoice that could not be delivered, one line "failed" is added to the Peppol tab of the invoice and, with the agenda on, an event on the invoice. The invoice itself does not change. The user of the scheduled job needs the right "Peppol: read".
 
+## Events in the agenda
+
+With the module Agenda on, the module records an event on the third party (and the invoice) after: an invoice sent through Peppol (`AC_PEPPOL_SENT`), an incoming invoice booked (`AC_PEPPOL_BOOKED`) or rejected (`AC_PEPPOL_REJECTED`), a Peppol ID linked from the Peppol candidates (`AC_PEPPOL_ID_LINKED`), a rejection or query of the customer (`AC_PEPPOL_IR_RE`, `AC_PEPPOL_IR_UQ`) and an invoice that was not delivered (`AC_PEPPOL_FAILED`). Each type can be switched off in Agenda > Setup > Automatic events; all are on by default.
+
 ## Daily fetch of incoming documents
 
 A daily scheduled job ("Peppol: daily fetch of incoming documents from the access point") fetches the new documents from the access point into Billing > Peppol > Incoming documents and confirms them at the access point, as the button "Refresh" on that page does. It does not create, validate or pay supplier invoices. A document whose download or confirmation failed stays unconfirmed at the access point and is tried again the next day. The user of the scheduled job needs the right "Peppol: write". The time of the last fetch is shown on the page. The job result and the log hold counts only. Requires the module "Scheduled jobs" and the Dolibarr cron script on the server.
