@@ -1334,3 +1334,185 @@ function peppolInboxDefaultStatus($value = null)
 	}
 	return $value === 'all' ? '' : $value;
 }
+
+/**
+ * Event types of this module in Agenda > Setup > Automatic events (since 2.14.0). The three older types
+ * (AC_PEPPOL_IR_RE, AC_PEPPOL_IR_UQ, AC_PEPPOL_FAILED) are in it too, so they can be switched on and off; they stay
+ * on by default.
+ *
+ * @return array<string,int>	Code => position (rang) in the list
+ */
+function peppolAgendaTypes()
+{
+	// The language keys Notify_<code> (admin/agenda.php reads them itself):
+	// Notify_AC_PEPPOL_SENT, Notify_AC_PEPPOL_BOOKED, Notify_AC_PEPPOL_REJECTED, Notify_AC_PEPPOL_ID_LINKED,
+	// Notify_AC_PEPPOL_IR_RE, Notify_AC_PEPPOL_IR_UQ, Notify_AC_PEPPOL_FAILED
+	return array(
+		'AC_PEPPOL_SENT' => 950,
+		'AC_PEPPOL_FAILED' => 951,
+		'AC_PEPPOL_IR_RE' => 952,
+		'AC_PEPPOL_IR_UQ' => 953,
+		'AC_PEPPOL_BOOKED' => 954,
+		'AC_PEPPOL_REJECTED' => 955,
+		'AC_PEPPOL_ID_LINKED' => 956,
+	);
+}
+
+/**
+ * SQL for enabling the module: the event types (again) in llx_c_action_trigger. Repeatable: first removed by code,
+ * then inserted. Works on MySQL, MariaDB and PostgreSQL.
+ *
+ * @param	DoliDB		$db		Database
+ * @param	Translate	$langs	Language of the description (admin/agenda.php translates Notify_<code> itself)
+ * @return	string[]
+ */
+function peppolAgendaInitSql($db, $langs)
+{
+	$sql = peppolAgendaRemoveSql();
+	foreach (peppolAgendaTypes() as $code => $rang) {
+		$key = 'Notify_' . $code;
+		$label = dol_trunc($langs->transnoentitiesnoconv($key), 120, 'right', 'UTF-8', 1);
+		$sql[] = "INSERT INTO " . MAIN_DB_PREFIX . "c_action_trigger (elementtype, code, label, description, rang) VALUES ('peppolpeppyrus', '"
+			. $db->escape($code) . "', '" . $db->escape($label) . "', '" . $db->escape($label) . "', " . ((int) $rang) . ")";
+	}
+	return $sql;
+}
+
+/**
+ * SQL for disabling the module: the event types removed from llx_c_action_trigger again. The settings
+ * (MAIN_AGENDA_ACTIONAUTO_<code>) stay, so a deliberate choice is not lost.
+ *
+ * @return	string[]
+ */
+function peppolAgendaRemoveSql()
+{
+	return array("DELETE FROM " . MAIN_DB_PREFIX . "c_action_trigger WHERE code IN ('" . implode("','", array_keys(peppolAgendaTypes())) . "')");
+}
+
+/**
+ * Switches every event type on by default once, when the module is enabled. Dolibarr removes the setting
+ * MAIN_AGENDA_ACTIONAUTO_<code> when the type is unticked in Agenda > Setup; that is why PEPPOL_AGENDA_DEFAULTS_DONE
+ * remembers which types were switched on before, so disabling and enabling the module does not undo a deliberate
+ * choice to switch a type off.
+ *
+ * @param	DoliDB	$db		Database
+ * @return	void
+ */
+function peppolAgendaEnableDefaults($db)
+{
+	global $conf;
+
+	require_once DOL_DOCUMENT_ROOT . '/core/lib/admin.lib.php';
+	$done = array_values(array_filter(explode(',', getDolGlobalString('PEPPOL_AGENDA_DEFAULTS_DONE'))));
+	foreach (array_keys(peppolAgendaTypes()) as $code) {
+		if (in_array($code, $done, true)) {
+			continue;
+		}
+		if (getDolGlobalString('MAIN_AGENDA_ACTIONAUTO_' . $code) === '') {
+			dolibarr_set_const($db, 'MAIN_AGENDA_ACTIONAUTO_' . $code, '1', 'chaine', 0, '', $conf->entity);
+		}
+		$done[] = $code;
+	}
+	dolibarr_set_const($db, 'PEPPOL_AGENDA_DEFAULTS_DONE', implode(',', $done), 'chaine', 0, '', $conf->entity);
+}
+
+/**
+ * Whether an event type is on: ticked in Agenda > Setup, or never switched on by default yet (the module was not
+ * disabled and enabled after the update). So the older types keep working as before.
+ *
+ * @param	string	$code		Code of the type
+ * @param	string	$value		Value of MAIN_AGENDA_ACTIONAUTO_<code>
+ * @param	string	$done		Value of PEPPOL_AGENDA_DEFAULTS_DONE (codes, separated by commas)
+ * @return	bool
+ */
+function peppolAgendaTypeEnabled($code, $value, $done)
+{
+	if ((int) $value > 0) {
+		return true;
+	}
+	return !in_array($code, array_filter(explode(',', $done)), true);
+}
+
+/**
+ * Whether an event of this type must be recorded now: the module Agenda is enabled and the type is on
+ *
+ * @param	string	$code	Code of the type
+ * @return	bool
+ */
+function peppolAgendaEnabled($code)
+{
+	return isModEnabled('agenda') && peppolAgendaTypeEnabled($code, getDolGlobalString('MAIN_AGENDA_ACTIONAUTO_' . $code), getDolGlobalString('PEPPOL_AGENDA_DEFAULTS_DONE'));
+}
+
+/**
+ * Records an event in the agenda of Dolibarr (since 2.14.0), after a successful action. Directly as an ActionComm,
+ * not through a trigger, so there is no duplicate. When it fails, only a warning in the log: the action itself
+ * goes on.
+ *
+ * @param	DoliDB	$db				Database
+ * @param	User	$user			Who did it (for a scheduled job: the user of the job)
+ * @param	string	$code			Code of the type (peppolAgendaTypes())
+ * @param	string	$label			Short title
+ * @param	string	$note			Note (references, no personal data)
+ * @param	int		$socid			Third party, or 0
+ * @param	int		$fkelement		Linked object, or 0
+ * @param	string	$elementtype	Type of the linked object ('invoice', 'invoice_supplier'), or ''
+ * @return	int		1 recorded, 0 not needed (agenda or type off), -1 error
+ */
+function peppolAgendaEvent($db, $user, $code, $label, $note, $socid = 0, $fkelement = 0, $elementtype = '')
+{
+	if (!peppolAgendaEnabled($code)) {
+		return 0;
+	}
+	try {
+		require_once DOL_DOCUMENT_ROOT . '/comm/action/class/actioncomm.class.php';
+		$ac = new ActionComm($db);
+		$ac->type_code = 'AC_OTH_AUTO';
+		$ac->code = $code;
+		$ac->label = dol_trunc($label, 120, 'right', 'UTF-8', 1);
+		$ac->note_private = $note;
+		$ac->datep = dol_now();
+		$ac->datef = $ac->datep;
+		$ac->percentage = -1;
+		$ac->userownerid = is_object($user) ? (int) $user->id : 0;
+		$ac->socid = max(0, (int) $socid);
+		if ((int) $fkelement > 0 && $elementtype !== '') {
+			$ac->fk_element = (int) $fkelement;
+			$ac->elementtype = $elementtype;
+		}
+		if ($ac->create($user) <= 0) {
+			dol_syslog('peppolAgendaEvent ' . $code . ' not recorded: ' . $ac->error . ' ' . implode(', ', $ac->errors), LOG_WARNING);
+			return -1;
+		}
+	} catch (Throwable $e) {
+		dol_syslog('peppolAgendaEvent ' . $code . ' not recorded: ' . $e->getMessage(), LOG_WARNING);
+		return -1;
+	}
+	return 1;
+}
+
+/**
+ * Note of an incoming invoice that was booked (since 2.14.0)
+ *
+ * @param	Translate	$langs		Language
+ * @param	string		$docref		Reference of the Peppol document
+ * @param	string		$number		Invoice number of the supplier
+ * @param	bool		$existing	Linked to a supplier invoice that already existed
+ * @param	bool		$draft		Not validated (draft)
+ * @param	bool		$approval	Approval (AP) sent to the supplier
+ * @return	string
+ */
+function peppolAgendaBookedNote($langs, $docref, $number, $existing, $draft, $approval)
+{
+	$lines = array($langs->transnoentitiesnoconv('peppolAgendaDocument', $docref));
+	if ($number !== '') {
+		$lines[] = $langs->transnoentitiesnoconv('peppolAgendaSupplierNumber', $number);
+	}
+	if ($existing) {
+		$lines[] = $langs->transnoentitiesnoconv('peppolAgendaLinkedExisting');
+	} elseif ($draft) {
+		$lines[] = $langs->transnoentitiesnoconv('peppolAgendaDraft');
+	}
+	$lines[] = $langs->transnoentitiesnoconv($approval ? 'peppolAgendaApprovalSent' : 'peppolAgendaApprovalNotSent');
+	return implode("\n", $lines);
+}

@@ -388,4 +388,51 @@ class PeppolLibTest extends TestCase
 		$this->assertSame(array(0, 1, 3, 5), peppolInboxOpenStatuses());
 		$this->assertNotContains(2, peppolInboxOpenStatuses());
 	}
+
+	/**
+	 * Agenda event types (2.14.0): codes, on or off, SQL for disabling, note on booking
+	 *
+	 * @return void
+	 */
+	public function testAgenda()
+	{
+		global $langs;
+		$langs->load('peppol@peppolpeppyrus');
+
+		$types = peppolAgendaTypes();
+		$this->assertArrayHasKey('AC_PEPPOL_SENT', $types);
+		$this->assertArrayHasKey('AC_PEPPOL_FAILED', $types);
+		foreach (array_keys($types) as $code) {
+			$this->assertMatchesRegularExpression('/^[A-Z_]+$/', $code);
+			$this->assertNotSame('Notify_'.$code, $langs->transnoentitiesnoconv('Notify_'.$code), $code);
+		}
+
+		// Never switched on by default (module not disabled and enabled after the update): on, as before
+		$this->assertTrue(peppolAgendaTypeEnabled('AC_PEPPOL_FAILED', '', ''));
+		// Ticked
+		$this->assertTrue(peppolAgendaTypeEnabled('AC_PEPPOL_FAILED', '1', 'AC_PEPPOL_FAILED'));
+		// Deliberately unticked (Dolibarr then removes the setting)
+		$this->assertFalse(peppolAgendaTypeEnabled('AC_PEPPOL_FAILED', '', 'AC_PEPPOL_SENT,AC_PEPPOL_FAILED'));
+		$this->assertFalse(peppolAgendaTypeEnabled('AC_PEPPOL_FAILED', '0', 'AC_PEPPOL_FAILED'));
+
+		// Without the module Agenda nothing is recorded (so no database needed either)
+		$this->assertFalse(peppolAgendaEnabled('AC_PEPPOL_SENT'));
+		$this->assertSame(0, peppolAgendaEvent(null, null, 'AC_PEPPOL_SENT', 'x', 'y'));
+
+		$sql = peppolAgendaRemoveSql();
+		$this->assertCount(1, $sql);
+		$this->assertStringContainsString("'AC_PEPPOL_ID_LINKED'", $sql[0]);
+		$this->assertStringContainsString("'AC_PEPPOL_IR_RE'", $sql[0]);
+		$this->assertStringStartsWith('DELETE FROM llx_c_action_trigger WHERE code IN', $sql[0]);
+
+		$note = peppolAgendaBookedNote($langs, 'PI-0001', 'INV-001', false, true, true);
+		$this->assertStringContainsString('PI-0001', $note);
+		$this->assertStringContainsString('INV-001', $note);
+		$this->assertStringContainsString($langs->transnoentitiesnoconv('peppolAgendaDraft'), $note);
+		$this->assertStringContainsString($langs->transnoentitiesnoconv('peppolAgendaApprovalSent'), $note);
+		$note = peppolAgendaBookedNote($langs, 'PI-0002', '', true, true, false);
+		$this->assertStringContainsString($langs->transnoentitiesnoconv('peppolAgendaLinkedExisting'), $note);
+		$this->assertStringNotContainsString($langs->transnoentitiesnoconv('peppolAgendaDraft'), $note);
+		$this->assertStringContainsString($langs->transnoentitiesnoconv('peppolAgendaApprovalNotSent'), $note);
+	}
 }

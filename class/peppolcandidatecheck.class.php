@@ -19,6 +19,9 @@ dol_include_once('/peppolpeppyrus/lib/peppol.lib.php');
  */
 class PeppolCandidateCheck
 {
+	/** @var string Peppol ID that link() linked last (since 2.14.0, for the agenda event) */
+	public $lastLinkedId = '';
+
 	const STATUS_NEW = 0;
 	const STATUS_LINKED = 1;
 	const STATUS_IGNORED = 2;
@@ -334,6 +337,7 @@ class PeppolCandidateCheck
 			return 0;
 		}
 		$soc->array_options['options_peppol_id'] = $cand->participant_id;
+		$this->lastLinkedId = (string) $cand->participant_id;
 		// Update only this extra field, the other extra fields of the third party stay as they are
 		if ($soc->updateExtraField('peppol_id', null, $user) < 0) {
 			$this->error = $soc->error;

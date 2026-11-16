@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.14.0
+
+- **New: what happens through Peppol is shown in the agenda** of the third party and the invoice, not only in the Peppol log. Only when the module Agenda is enabled, and only after the action succeeded:
+  - **Invoice sent through Peppol** (`AC_PEPPOL_SENT`): on the customer invoice and the customer, with the message ID of Peppyrus and whether the invoice was sent by hand or by the scheduled job;
+  - **Incoming invoice booked** (`AC_PEPPOL_BOOKED`): on the supplier invoice and the supplier, with the Peppol document, the invoice number of the supplier, whether it was kept as draft or linked to an existing supplier invoice, and whether an approval (AP) was sent to the supplier;
+  - **Incoming invoice rejected** (`AC_PEPPOL_REJECTED`): on the supplier, with the reason and whether the rejection (RE) was sent or only recorded here;
+  - **Peppol ID linked** (`AC_PEPPOL_ID_LINKED`) from the list of possible Peppol IDs: on the third party, with the Peppol ID. With more than 200 at once, one summary event.
+- **Can be switched on and off** in Agenda > Setup > Automatic events. The three existing types are there too (rejection and query of the customer, `AC_PEPPOL_IR_RE`/`AC_PEPPOL_IR_UQ`, and not delivered, `AC_PEPPOL_FAILED`). All are on by default; the existing types keep working before the module is disabled and enabled. A type you untick stays off, also after disabling and enabling the module (the module remembers in `PEPPOL_AGENDA_DEFAULTS_DONE` which types were switched on by default once; Dolibarr removes the setting when a type is unticked).
+- When recording the event fails, sending or booking goes on (a warning in the log).
+
+**After updating:** deactivate and reactivate the module (Setup, Modules), so the new event types appear in Agenda > Setup > Automatic events; then flush memcached and restart PHP.
+
 ## 2.13.2
 
 - **Types in the doc blocks completed** (parameters, return values, properties and array shapes). Only PHPDoc: no code changes, no difference in use. PHPStan reports far fewer missing types; the baseline is smaller.
