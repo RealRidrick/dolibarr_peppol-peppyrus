@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.13.3
+
+Small repairs, no change in behaviour.
+
+- `class/peppolimport.class.php` passed `$notrigger` as true/false to `createCommon()`, `updateCommon()`, `deleteCommon()` and `deleteLineCommon()`, where Dolibarr expects 0 or 1. This was hidden by four `@phpstan-ignore-next-line` without a reason. It is now 0 or 1, and the ignores are gone. A fifth ignore in `peppolimport_list.php` no longer hid anything and is removed too.
+- `peppol_outgoing.php` used the variable `$m` in a loop. Dolibarr uses that name for the memcached connection (`dol_getcache()`); with an object in it a page can go blank. The variable is now called `$mi`.
+- After a PDF is generated (`afterPDFCreation`), the class `ActionsDolipdf` (module Dolipdf, not always installed) is now compared by name with `strcasecmp()`.
+- In the list of incoming Peppol documents, the check for an empty `$contextpage` is gone: it always has a value.
+- PHPStan: the remaining ignores now name the error and the reason (Dolibarr 18 describes two parameters differently from 22 and later). The type description of `DolibarrModules::$menu` in Dolibarr 24 asks for keys Dolibarr never reads; that message is excluded with a reason in `phpstan.neon.dist`.
+
+**After updating:** flush memcached and restart PHP. The module does not need to be disabled and enabled.
+
 ## 2.13.2
 
 - **Types in the doc blocks completed** (parameters, return values, properties and array shapes). Only PHPDoc: no code changes, no difference in use. PHPStan reports far fewer missing types; the baseline is smaller.

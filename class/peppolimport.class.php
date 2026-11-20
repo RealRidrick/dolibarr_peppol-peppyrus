@@ -314,8 +314,8 @@ class Peppolimport extends \CommonObject
 			return -2;
 		}
 
-		/** @phpstan-ignore-next-line */
-		return $this->createCommon($user, $notrigger);
+		// Dolibarr expects 0 or 1, this class receives a bool
+		return $this->createCommon($user, $notrigger ? 1 : 0);
 	}
 
 	/**
@@ -553,8 +553,8 @@ class Peppolimport extends \CommonObject
 	 */
 	public function update(\User $user, $notrigger = false)
 	{
-		/** @phpstan-ignore-next-line */
-		return $this->updateCommon($user, $notrigger);
+		// Dolibarr expects 0 or 1, this class receives a bool
+		return $this->updateCommon($user, $notrigger ? 1 : 0);
 	}
 
 	/**
@@ -583,8 +583,8 @@ class Peppolimport extends \CommonObject
 			dol_delete_dir($dirpath);
 		}
 
-		/** @phpstan-ignore-next-line */
-		return $this->deleteCommon($user, $notrigger);
+		// Dolibarr expects 0 or 1, this class receives a bool
+		return $this->deleteCommon($user, $notrigger ? 1 : 0);
 		//return $this->deleteCommon($user, $notrigger, 1);
 	}
 
@@ -603,8 +603,9 @@ class Peppolimport extends \CommonObject
 			return -2;
 		}
 
-		/** @phpstan-ignore-next-line */
-		return $this->deleteLineCommon($user, $idline, $notrigger);
+		// Dolibarr 22 and later expect 0 or 1, this class receives a bool. Dolibarr 18 still describes $notrigger here as a
+		// bool, so PHPStan against 18 reports the int; both work.
+		return $this->deleteLineCommon($user, $idline, $notrigger ? 1 : 0); // @phpstan-ignore argument.type
 	}
 
 

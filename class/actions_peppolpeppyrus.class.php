@@ -223,7 +223,8 @@ class ActionsPeppolpeppyrus
 	 */
 	public function afterPDFCreation($parameters, &$pdfhandler, &$action)
 	{
-		if (!is_subclass_of($pdfhandler, 'ModelePDFFactures') && (get_class($pdfhandler) != 'ActionsDolipdf')) {
+		// ActionsDolipdf comes from the module Dolipdf and is not always present; therefore compared by name
+		if (!is_subclass_of($pdfhandler, 'ModelePDFFactures') && strcasecmp(get_class($pdfhandler), 'ActionsDolipdf') !== 0) {
 			dol_syslog(get_class($this) . '::executeHooks peppolpeppyrus pdfhandler class is ' . json_encode(get_class($pdfhandler)));
 			return 0;
 		}
