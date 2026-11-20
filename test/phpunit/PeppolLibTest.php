@@ -435,4 +435,24 @@ class PeppolLibTest extends TestCase
 		$this->assertStringNotContainsString($langs->transnoentitiesnoconv('peppolAgendaDraft'), $note);
 		$this->assertStringContainsString($langs->transnoentitiesnoconv('peppolAgendaApprovalNotSent'), $note);
 	}
+
+	/**
+	 * Only the Peppol XML of the invoice can be sent (original module, #21)
+	 *
+	 * @return void
+	 */
+	public function testOnlyPeppolXmlOfTheInvoice()
+	{
+		global $db;
+		require_once DOL_DOCUMENT_ROOT.'/compta/facture/class/facture.class.php';
+		$inv = new Facture($db);
+		$inv->last_main_doc = 'facture/FA0001/FA0001.pdf';
+		foreach (array('other-document.xml', 'FA0001.xml', 'FA0001_peppol.pdf', 'FA0001_peppol.xml.txt') as $file) {
+			$_GET['selectFilename'] = $file;
+			$this->assertSame(-1, peppolFindFileToUse($inv, ''), $file);
+		}
+		$_GET['selectFilename'] = 'FA0001_peppol.xml';
+		$this->assertSame('FA0001_peppol.xml', peppolFindFileToUse($inv, ''));
+		unset($_GET['selectFilename']);
+	}
 }
