@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.14.2
+
+Two fixes of the original module (Cedric Marcoux, 2.3.1) that were lost when its history was merged into this fork are restored.
+
+- **Only the Peppol XML of the invoice can be sent** (original #21). With a crafted request, another XML file in the folder of the invoice could be chosen.
+- **The mass action Analyse ignores documents of other entities** (multicompany). The card already checked the entity; the mass action did not.
+- Test of the first fix in `PeppolLibTest`.
+
+**After updating:** flush memcached and restart PHP. The module does not need to be disabled and enabled.
+
 ## 2.14.1
 
 Small repairs, no change in behaviour.

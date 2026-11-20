@@ -326,7 +326,10 @@ if (empty($reshook)) {
 		$importHtml .= "<tbody>";
 		$i = 0;
 		foreach ($toselect as $oid) {
-			$object->fetch($oid);
+			// Multicompany: ignore documents of other entities (original module)
+			if ($object->fetch($oid) <= 0 || !peppolObjectIsInUserEntities($object)) {
+				continue;
+			}
 			//Test si le fichier local existe encore ...
 			if ($object->fileExist()) {
 				// $res = $object->importNow();
