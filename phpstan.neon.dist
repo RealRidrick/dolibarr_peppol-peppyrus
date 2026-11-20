@@ -75,3 +75,10 @@ parameters:
 		# Globals created by main.inc.php; outside an installation PHPStan does not see them.
 		-
 			message: '#^Variable \$(db|user|conf|langs|mysoc|hookmanager|form) might not be defined\.$#'
+		# The type description of DolibarrModules::$menu (Dolibarr 24) requires the keys fk_parent and positionfull,
+		# but Dolibarr never reads them (insert_menus() uses fk_menu and position). A module that leaves them out,
+		# like the module builder of Dolibarr itself, is fine. Dolibarr develop already has a wider description.
+		-
+			message: '#^Property DolibarrModules\:\:\$menu \(1\|array\<array\{.*\}\>\) does not accept .*\.$#'
+			identifier: assign.propertyType
+			path: core/modules/mod*.class.php
