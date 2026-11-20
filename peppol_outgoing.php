@@ -103,8 +103,9 @@ if (!empty($facturen)) {
 			$fout = $langs->trans('peppolOutgoingNoAnswer');
 			break;
 		}
-		foreach ($lijst as $m) {
-			${$doel}[$m['id']] = true;
+		// Not $m: Dolibarr uses that name for the memcached connection (dol_getcache())
+		foreach ($lijst as $mi) {
+			${$doel}[$mi['id']] = true;
 		}
 	}
 	peppol_sessie_terug();
