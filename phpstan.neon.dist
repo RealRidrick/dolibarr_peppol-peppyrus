@@ -43,12 +43,15 @@ parameters:
 		- index.php
 		- peppol_candidates.php
 		- peppol_list.php
-		- peppol_search_directory.php
 		- peppol_tab.php
 		- peppolimport_card.php
 		- peppolimport_list.php
 		- search.php
 	excludePaths:
+		analyse:
+			# Updates tab of the original module (#22), kept as it is in that module
+			- admin/update.php
+			- lib/peppolupdate.lib.php
 		analyseAndScan:
 			- vendor/*
 			- backport/*
@@ -66,6 +69,10 @@ parameters:
 		- DOL_MAJOR_VERSION
 	reportUnmatchedIgnoredErrors: false
 	ignoreErrors:
+		# Check of the original module (#21): an object that is not a customer invoice is refused
+		-
+			message: '#^Property CommonObject::\$element \(string\) in isset\(\) is not nullable\.$#'
+			path: lib/peppol.lib.php
 		# A module page looks for main.inc.php with relative paths, because it does not know how deep it is
 		# under htdocs/custom. That only works in an installation, not in this repository.
 		-

@@ -259,9 +259,9 @@ if (empty($reshook)) {
 		$action = '';
 	}
 
-	if ($action == 'analyze' && $permissiontoadd) {
-		if (!peppolCheckToken()) {
-			accessforbidden($langs->trans('ErrorBadValueForParameter', 'token'));
+	if ($action == 'analyze') {
+		if (!$permissiontoadd || !peppolTokenIsValid(GETPOST('token', 'alpha'), currentToken())) {
+			accessforbidden();
 		}
 		$res = $object->importNow();
 	}

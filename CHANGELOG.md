@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.13.4
+
+Everything the original module (Cedric Marcoux, 2.3.1) has built in is kept, so that this branch only adds to it.
+
+- **Updates tab kept** (#22): `admin/update.php`, `lib/peppolupdate.lib.php` and `release-signing-key.pub` as in the original module. The update check reads `VERSION` of the original repository again.
+- **Disclaimer kept** (#24, #25): shown on the setup page, acceptance by an administrator stored outside the Dolibarr constants, sending (by hand, from the invoice card and by the scheduled job) blocked until it is accepted, with a visible notice on the invoice card.
+- **Rights to send as in the original module** (#13): `peppolUserCanSend()` and `peppolSendRefusalReason()` are used by the send action, the button and the scheduled job.
+- **Webhook kept** (`public/hook.php`, #SEC_003): the original module keeps it, so does this branch; the secret key is no longer removed when the module is reactivated.
+- **Developer scripts and regression tests kept** (`scripts/`, `tests/run.php`, both command line only, #23).
+- **Two fixes of the original module restored** that were lost when the histories were merged: only the Peppol XML of the invoice can be sent (#21), and the mass action Analyse ignores documents of other entities (multicompany).
+- `peppol_search_directory.php` removed, as in the original module (`search.php` replaces it).
+- Search button on the third party card without a tooltip and in the same window (#16); the refresh of incoming documents and the Analyse action check the write right and the token as in the original module.
+- `tests/run.php`: the test PDF class implements `write_file()`, which is abstract since Dolibarr 24 (without it the suite stops with a fatal error on Dolibarr 24).
+- Result of `tests/run.php` on Dolibarr 24: the same as the original module (40 passed; the 3 others need a test web server, the module table and a non-root user).
+
+**After updating:** an administrator accepts the disclaimer on the setup page (sending is blocked until then); flush memcached and restart PHP.
+
 ## 2.13.3
 
 Small repairs, no change in behaviour.

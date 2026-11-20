@@ -110,8 +110,14 @@ class PeppolAutoSend
 			return 0;
 		}
 
-		if (!is_object($user) || !$user->hasRight('peppolpeppyrus', 'write') || !$user->hasRight('facture', 'creer')) {
+		if (!peppolUserCanSend($user)) {
 			$this->error = $langs->trans('peppolAutoSendNoRight');
+			$this->output = $this->error;
+			return 1;
+		}
+		// Nothing is sent before an administrator accepted the disclaimer (#24)
+		if (!peppolDisclaimerAcceptance()) {
+			$this->error = $langs->trans('PeppolDisclaimerNotAccepted');
 			$this->output = $this->error;
 			return 1;
 		}

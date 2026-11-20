@@ -98,16 +98,13 @@ class ActionsPeppolpeppyrus
 				if (!in_array('invoicecard', $contextArray) || !($object instanceof Facture)) {
 					break;
 				}
-				if (!$user->hasRight('peppolpeppyrus', 'write') || !$user->hasRight('facture', 'creer')) {
-					setEventMessages($langs->trans('NotEnoughPermissions'), null, 'errors');
+				// Confirmation, rights, disclaimer and status (#13, #24)
+				$refusal = peppolSendRefusalReason($user, $object, GETPOST('confirm', 'alpha'));
+				if ($refusal === 'PeppolSendNotConfirmed') {
 					break;
 				}
-				if (GETPOST('confirm', 'alpha') != 'yes') {
-					break;
-				}
-				// Only a validated or paid invoice or credit note (from the original module, #13)
-				if (!peppolIsInvoiceStatusEligible($object)) {
-					setEventMessages($langs->trans('PeppolErrorStatusNotEligible'), null, 'errors');
+				if ($refusal !== '') {
+					setEventMessages($langs->trans($refusal), null, 'errors');
 					break;
 				}
 				$filename = peppolFindFileToUse($object, $parameters['outputdir']);
@@ -505,11 +502,14 @@ class ActionsPeppolpeppyrus
 
 		$contextArray = explode(':', $parameters['context']);
 		if (in_array('invoicecard', $contextArray)) {
-			if (peppolIsInvoiceStatusEligible($object) && $user->hasRight('peppolpeppyrus', 'read')) {
+			if (peppolIsInvoiceStatusEligible($object) && peppolUserCanSend($user) && !peppolDisclaimerAcceptance()) {
+				// Shown disabled with the reason until an administrator accepted the disclaimer (#24)
+				$langs->load('peppol@peppolpeppyrus');
+				print '<div class="inline-block divButAction"><span class="butActionRefused classfortooltip" title="' . dol_escape_htmltag($langs->trans('PeppolDisclaimerNotAccepted')) . '">' . $langs->trans('peppolBtnSend') . '</span></div>';
+				// Visible explanation, not only a tooltip (#25)
+				setEventMessages(peppolDisclaimerNotice($user, $langs), null, 'warnings');
+			} elseif (peppolIsInvoiceStatusEligible($object) && peppolUserCanSend($user)) {
 				$classAction = "butAction";
-				if (!$user->hasRight('peppolpeppyrus', 'write') || !$user->hasRight('facture', 'creer')) {
-					$classAction = "butActionRefused";
-				}
 				if (!empty($object->array_options['options_peppol_id'])) {
 					$classAction = "butActionRefused";
 				}
@@ -526,10 +526,11 @@ class ActionsPeppolpeppyrus
 		} elseif (in_array('thirdpartycard', $contextArray)) {
 			$backto = 'card';
 		}
-		if ($backto !== '' && $user->hasRight('peppolpeppyrus', 'read')) {
+		if ($backto !== '') {
 			$langs->load("peppol@peppolpeppyrus");
 			$urlto = dol_buildpath("/peppolpeppyrus/search.php", 1) . "?socid=" . ((int) $object->id) . "&backto=" . $backto;
-			print '<div class="inline-block divButAction"><a class="butAction classfortooltip" title="' . dol_escape_htmltag($langs->trans("peppolFindPeppolIDPopupTitle")) . '" href="' . $urlto . '">' . $langs->trans("peppolBtnFindPeppolID") . '</a></div>';
+			// Same window, no tooltip: the search page is a normal Dolibarr page with a way back to the card (#16)
+			print '<div class="inline-block divButAction"><a class="butAction" href="' . $urlto . '">' . $langs->trans("peppolBtnFindPeppolID") . '</a></div>';
 		}
 
 		return 0;

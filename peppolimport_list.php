@@ -275,7 +275,7 @@ if (!GETPOST('confirmmassaction', 'alpha') && $massaction != 'presend' && $massa
 }
 
 if ($action == "refresh") {
-	if (!$user->hasRight('peppolpeppyrus', 'write') || !peppolCheckToken()) {
+	if (!$permissiontoadd || !peppolTokenIsValid(GETPOST('token', 'alpha'), currentToken())) {
 		accessforbidden();
 	}
 	// Fetches every new document from the access point: release the session meanwhile (a long action must not block the browser)
@@ -326,7 +326,10 @@ if (empty($reshook)) {
 		$importHtml .= "<tbody>";
 		$i = 0;
 		foreach ($toselect as $oid) {
-			$object->fetch($oid);
+			// Multicompany: ignore documents of other entities
+			if ($object->fetch($oid) <= 0 || !peppolObjectIsInUserEntities($object)) {
+				continue;
+			}
 			//Test si le fichier local existe encore ...
 			if ($object->fileExist()) {
 				// $res = $object->importNow();

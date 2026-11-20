@@ -402,6 +402,11 @@ function peppolAdminPrepareHead()
 	$head[$h][2] = 'settings';
 	$h++;
 
+	$head[$h][0] = dol_buildpath("/peppolpeppyrus/admin/update.php", 1);
+	$head[$h][1] = $langs->trans("PeppolUpdateTab");
+	$head[$h][2] = 'update';
+	$h++;
+
 	$head[$h][0] = dol_buildpath("/peppolpeppyrus/admin/about.php", 1);
 	$head[$h][1] = $langs->trans("About");
 	$head[$h][2] = 'about';
@@ -410,6 +415,267 @@ function peppolAdminPrepareHead()
 	complete_head_from_modules($conf, $langs, null, $head, $h, 'peppol');
 
 	return $head;
+}
+
+/**
+ * May this user send customer invoices through Peppol?
+ *
+ * Module "write" right, or the rights Dolibarr asks for sending an invoice by e-mail
+ * (create invoices, or the advanced "send" right).
+ *
+ * @param   User  $user  User
+ * @return  bool
+ */
+function peppolUserCanSend($user)
+{
+	if (!is_object($user)) {
+		return false;
+	}
+	return !empty($user->admin)
+		|| !empty($user->rights->peppolpeppyrus->write)
+		|| !empty($user->rights->facture->creer)
+		|| !empty($user->rights->facture->invoice_advance->send);
+}
+
+/**
+ * Checks done before sending a document to the access point (confirm_peppolSendFile).
+ *
+ * @param   User          $user     User
+ * @param   CommonObject  $invoice  Customer invoice
+ * @param   string        $confirm  Answer of the confirmation dialog
+ * @return  string                  '' when the document may be sent, otherwise the translation key of the reason
+ */
+function peppolSendRefusalReason($user, $invoice, $confirm)
+{
+	if ($confirm !== 'yes') {
+		return 'PeppolSendNotConfirmed';
+	}
+	if (!is_object($invoice) || !isset($invoice->element) || $invoice->element !== 'facture') {
+		return 'ErrorBadParameters';
+	}
+	if (!peppolUserCanSend($user)) {
+		return 'NotEnoughPermissions';
+	}
+	if (!peppolDisclaimerAcceptance()) {
+		return 'PeppolDisclaimerNotAccepted';
+	}
+	if (!peppolIsInvoiceStatusEligible($invoice)) {
+		return 'PeppolErrorStatusNotEligible';
+	}
+	return '';
+}
+
+/**
+ * Authentication of a webhook request.
+ *
+ * @param   string  $secretKey     Configured secret (PEPPOL_AP_WEBHOOK_KEY); empty = webhook disabled
+ * @param   string  $rawPayload    Raw request body
+ * @param   string  $hmacReceived  Signature received with the request (hex HMAC-SHA256 of the body)
+ * @return  string                 '' when the request is authentic, otherwise the reason (never contains a secret)
+ */
+function peppolWebhookAuthRefusal($secretKey, $rawPayload, $hmacReceived)
+{
+	if ((string) $secretKey === '') {
+		return 'webhook disabled (no secret key configured)';
+	}
+	if ((string) $hmacReceived === '') {
+		return 'no signature';
+	}
+	if (!hash_equals(hash_hmac('sha256', (string) $rawPayload, (string) $secretKey), strtolower(trim((string) $hmacReceived)))) {
+		return 'invalid signature';
+	}
+	return '';
+}
+
+/**
+ * May this user open the incoming Peppol documents (module right "Import Peppol invoices")?
+ *
+ * @param   User  $user  User
+ * @return  bool
+ */
+function peppolUserCanImport($user)
+{
+	return is_object($user) && empty($user->socid) && (!empty($user->admin) || !empty($user->rights->peppolpeppyrus->import));
+}
+
+/**
+ * Checks before storing a Peppol ID on a third party from the search page.
+ *
+ * @param   User    $user           User
+ * @param   string  $tokenGiven     Token received with the request
+ * @param   string  $tokenExpected  Token of the session (currentToken())
+ * @return  string                  '' when allowed, otherwise the translation key of the reason
+ */
+function peppolSetThirdpartyIdRefusalReason($user, $tokenGiven, $tokenExpected)
+{
+	if (!peppolTokenIsValid($tokenGiven, $tokenExpected)) {
+		return 'ErrorBadValueForParameter';
+	}
+	if (!is_object($user) || (empty($user->admin) && empty($user->rights->societe->creer))) {
+		return 'NotEnoughPermissions';
+	}
+	return '';
+}
+
+/**
+ * Peppol ID stored on a third party, from a directory search result.
+ *
+ * @param   string  $peppolScheme   Scheme of the directory, e.g. "iso6523-actorid-upis::0208"
+ * @param   string  $participantId  Participant identifier, e.g. "0000000097"
+ * @return  string                  "schemeCode:participantId" (e.g. "0208:0000000097"), or the participant id alone when the scheme is unknown
+ */
+function peppolBuildThirdpartyPeppolId($peppolScheme, $participantId)
+{
+	$participantId = trim((string) $participantId);
+	if (preg_match('/::(\d+)$/', (string) $peppolScheme, $m) && $participantId !== '') {
+		return $m[1] . ':' . $participantId;
+	}
+	return $participantId;
+}
+
+/**
+ * CSRF token check for actions the module handles itself.
+ *
+ * @param   string  $tokenGiven     Token received with the request
+ * @param   string  $tokenExpected  Token of the session (currentToken())
+ * @return  bool
+ */
+function peppolTokenIsValid($tokenGiven, $tokenExpected)
+{
+	return (string) $tokenGiven !== '' && (string) $tokenExpected !== '' && hash_equals((string) $tokenExpected, (string) $tokenGiven);
+}
+
+/**
+ * Version of the disclaimer text: increase it when the text changes, a new acceptance is then required.
+ */
+if (!defined('PEPPOL_DISCLAIMER_VERSION')) {
+	define('PEPPOL_DISCLAIMER_VERSION', 1);
+}
+
+/**
+ * Folder of the disclaimer acceptance records (#24).
+ *
+ * A private folder of the data directory, not the Dolibarr constants: no Dolibarr screen can write
+ * it, so an administrator (of this or another entity) cannot forge or alter the record through
+ * the constants page.
+ *
+ * @return string
+ */
+function peppolDisclaimerDir()
+{
+	return defined('PEPPOL_DISCLAIMER_DIR') ? PEPPOL_DISCLAIMER_DIR : DOL_DATA_ROOT . '/peppolpeppyrus_update';
+}
+
+/**
+ * Read all acceptance records.
+ *
+ * @return array<string,mixed>  entity => [version, user_id, login, date]
+ */
+function peppolDisclaimerRecords()
+{
+	$file = peppolDisclaimerDir() . '/disclaimer.json';
+	if (!is_file($file) || is_link($file)) {
+		return array();
+	}
+	$data = json_decode((string) @file_get_contents($file), true);
+	return is_array($data) ? $data : array();
+}
+
+/**
+ * Acceptance of the current disclaimer in the current entity (#24).
+ *
+ * @return array{version:int,user_id:int,login:string,date:int}|null  [version, user_id, login, date] or null when not accepted
+ */
+function peppolDisclaimerAcceptance()
+{
+	global $conf;
+	$records = peppolDisclaimerRecords();
+	$data = $records[(string) ((int) $conf->entity)] ?? null;
+	if (!is_array($data) || (int) ($data['version'] ?? 0) !== PEPPOL_DISCLAIMER_VERSION || empty($data['user_id']) || empty($data['date'])) {
+		return null;
+	}
+	return array('version' => (int) $data['version'], 'user_id' => (int) $data['user_id'], 'login' => (string) ($data['login'] ?? ''), 'date' => (int) $data['date']);
+}
+
+/**
+ * Warning shown while the disclaimer is not accepted (#25): why sending is blocked, and for
+ * administrators a link to the module setup where it can be accepted.
+ *
+ * @param User      $user  Current user
+ * @param Translate $langs Translations
+ * @return string          HTML (text escaped)
+ */
+function peppolDisclaimerNotice($user, $langs)
+{
+	$langs->load('peppol@peppolpeppyrus');
+	$html = dol_escape_htmltag($langs->transnoentitiesnoconv('PeppolDisclaimerNotAcceptedNotice'));
+	if (!empty($user->admin)) {
+		$html .= ' <a href="' . dol_escape_htmltag(dol_buildpath('/peppolpeppyrus/admin/setup.php', 1)) . '">' . dol_escape_htmltag($langs->transnoentitiesnoconv('PeppolDisclaimerGoToSetup')) . '</a>';
+	}
+	return $html;
+}
+
+/**
+ * Record that an administrator accepted the disclaimer (current record + append-only history).
+ *
+ * @param DoliDB $db   Database
+ * @param User   $user Administrator
+ * @return bool
+ */
+function peppolDisclaimerAccept($db, $user)
+{
+	global $conf;
+	if (empty($user->admin) || !empty($user->socid)) {
+		return false;
+	}
+	$dir = peppolDisclaimerDir();
+	if ((!is_dir($dir) && !@mkdir($dir, 0700, true)) || is_link($dir)) {
+		return false;
+	}
+	$lock = @fopen($dir . '/disclaimer.lock', 'c');
+	if (!$lock || !flock($lock, LOCK_EX)) {
+		return false;
+	}
+	$ok = false;
+	try {
+		$entry = array('version' => PEPPOL_DISCLAIMER_VERSION, 'user_id' => (int) $user->id, 'login' => (string) $user->login, 'date' => dol_now(), 'entity' => (int) $conf->entity);
+		// History first: an acceptance is never recorded without its trace
+		$log = $dir . '/disclaimer.log';
+		if (is_link($log)) {
+			return false;
+		}
+		$line = json_encode($entry) . "\n";
+		$fh = @fopen($log, 'ab');
+		if (!$fh || fwrite($fh, $line) !== strlen($line) || !fclose($fh)) {
+			return false;
+		}
+		@chmod($log, 0600);
+		$file = $dir . '/disclaimer.json';
+		$records = peppolDisclaimerRecords();
+		// Never overwrite a record file that cannot be read: the other entities would lose their acceptance
+		if (is_file($file) && !$records && trim((string) @file_get_contents($file)) !== '') {
+			return false;
+		}
+		$records[(string) ((int) $conf->entity)] = $entry;
+		$json = json_encode($records);
+		$tmp = $dir . '/disclaimer-' . bin2hex(random_bytes(8)) . '.tmp';
+		$fh = @fopen($tmp, 'xb');
+		if (!$fh) {
+			return false;
+		}
+		$ok = fwrite($fh, $json) === strlen($json);
+		$ok = fclose($fh) && $ok;
+		@chmod($tmp, 0600);
+		$ok = $ok && @rename($tmp, $dir . '/disclaimer.json');
+		if (!$ok) {
+			@unlink($tmp);
+		}
+	} finally {
+		flock($lock, LOCK_UN);
+		fclose($lock);
+	}
+	dol_syslog('peppolpeppyrus disclaimer version ' . PEPPOL_DISCLAIMER_VERSION . ' accepted by user ' . ((int) $user->id) . ' in entity ' . ((int) $conf->entity) . ($ok ? '' : ' (not saved)'), LOG_NOTICE);
+	return $ok;
 }
 
 /**
@@ -577,8 +843,9 @@ function peppolFindFileToUse(CommonObject $obj, $defaultPath)
 		}
 	}
 
+	// Only the Peppol XML generated by the module can be sent (#21)
 	$ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-	if ($ext != "xml") {
+	if ($ext != "xml" || !preg_match('/_peppol\.xml$/i', (string) $filename)) {
 		dol_syslog("peppolFindFileToUse fix race condition, ext was=" . $ext);
 		return -1;
 	}
@@ -623,6 +890,12 @@ function peppolGetAPObject()
 function peppolSendToAccessPoint($filename, $invoice)
 {
 	global $langs, $conf, $user, $db;
+	// Nothing is sent before an administrator accepted the disclaimer (#24)
+	if (!peppolDisclaimerAcceptance()) {
+		$langs->load('peppol@peppolpeppyrus');
+		setEventMessages($langs->trans('PeppolDisclaimerNotAccepted'), null, 'errors');
+		return;
+	}
 	$obj = peppolGetAPObject();
 	if ($obj) {
 		$obj->sendToAccessPoint($filename, $invoice);

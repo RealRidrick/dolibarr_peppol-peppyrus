@@ -56,12 +56,12 @@ class modPeppolpeppyrus extends DolibarrModules
 
 		// Author
 		$this->editor_name = '';
-		$this->editor_url = 'https://github.com/RealRidrick/dolibarr_peppol-peppyrus';
+		$this->editor_url = '';
 
 		// Possible values for version are: 'development', 'experimental', 'dolibarr', 'dolibarr_deprecated' or a version string like 'x.y.z'
-		$this->version = '2.13.3';
+		$this->version = '2.13.4';
 		// File with the latest version number (VERSION in the public repository), read by checkForUpdate()
-		$this->url_last_version = 'https://raw.githubusercontent.com/RealRidrick/dolibarr_peppol-peppyrus/main/VERSION';
+		$this->url_last_version = 'https://raw.githubusercontent.com/cedric-marcoux/dolibarr_peppol-peppyrus/main/VERSION';
 
 		// Key used in llx_const table to save module status enabled/disabled (where PEPPOLPEPPYRUS is value of property name of module in uppercase)
 		$this->const_name = 'MAIN_MODULE_' . strtoupper($this->name);
@@ -442,10 +442,6 @@ class modPeppolpeppyrus extends DolibarrModules
 		$result = $extrafields->addExtraField('peppol_id',  $langs->trans('PeppolSpecificID'),    		'varchar', 1101, 100, 'thirdparty', 0, 0, '', null, 1, '', 1, $langs->trans('PeppolSpecificIDTooltip'), '', '', 'peppol@peppolpeppyrus', '$conf->peppolpeppyrus->enabled');
 		$result = $extrafields->addExtraField('peppol_id',  $langs->trans('PeppolSpecificInvoiceID'),   'varchar', 1101, 100, 'facture', 0, 0, '', null, 0, '', 5, $langs->trans('PeppolSpecificInvoiceIDTooltip'), '', '', 'peppol@peppolpeppyrus', '$conf->peppolpeppyrus->enabled');
 		$result = $extrafields->addExtraField('peppol_id',  $langs->trans('PeppolSpecificInvoiceID'),   'varchar', 1101, 100, 'facture_fourn', 0, 0, '', null, 0, '', 5, $langs->trans('PeppolSpecificInvoiceIDTooltip'), '', '', 'peppol@peppolpeppyrus', '$conf->peppolpeppyrus->enabled');
-
-		// Since 2.12.0 no webhook any more (Peppyrus has no webhooks): remove its secret key
-		require_once DOL_DOCUMENT_ROOT . '/core/lib/admin.lib.php';
-		dolibarr_del_const($this->db, 'PEPPOL_AP_WEBHOOK_KEY', $conf->entity);
 
 		// Permissions
 		$this->remove($options);
