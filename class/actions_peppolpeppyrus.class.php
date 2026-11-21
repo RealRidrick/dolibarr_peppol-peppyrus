@@ -505,7 +505,13 @@ class ActionsPeppolpeppyrus
 
 		$contextArray = explode(':', $parameters['context']);
 		if (in_array('invoicecard', $contextArray)) {
-			if (peppolIsInvoiceStatusEligible($object) && $user->hasRight('peppolpeppyrus', 'read')) {
+			$canSend = $user->hasRight('peppolpeppyrus', 'write') && $user->hasRight('facture', 'creer');
+			if (peppolIsInvoiceStatusEligible($object) && $canSend && !peppolDisclaimerAcceptance()) {
+				// Since 2.15.0: shown disabled with the reason until an administrator accepted the disclaimer (#24, #25)
+				$langs->load('peppol@peppolpeppyrus');
+				print '<div class="inline-block divButAction"><span class="butActionRefused classfortooltip" title="' . dol_escape_htmltag($langs->trans('PeppolDisclaimerNotAccepted')) . '">' . $langs->trans('peppolBtnSend') . '</span></div>';
+				setEventMessages(peppolDisclaimerNotice($user, $langs), null, 'warnings');
+			} elseif (peppolIsInvoiceStatusEligible($object) && $user->hasRight('peppolpeppyrus', 'read')) {
 				$classAction = "butAction";
 				if (!$user->hasRight('peppolpeppyrus', 'write') || !$user->hasRight('facture', 'creer')) {
 					$classAction = "butActionRefused";

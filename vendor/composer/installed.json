@@ -2,17 +2,17 @@
     "packages": [
         {
             "name": "josemmo/einvoicing",
-            "version": "v0.2.7",
-            "version_normalized": "0.2.7.0",
+            "version": "v0.3.1",
+            "version_normalized": "0.3.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/josemmo/einvoicing.git",
-                "reference": "fb318980fafda05da66385221d590f610945ee28"
+                "reference": "6e042d17a0722c698cc40c83a4dd0c70b1bfd73c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/josemmo/einvoicing/zipball/fb318980fafda05da66385221d590f610945ee28",
-                "reference": "fb318980fafda05da66385221d590f610945ee28",
+                "url": "https://api.github.com/repos/josemmo/einvoicing/zipball/6e042d17a0722c698cc40c83a4dd0c70b1bfd73c",
+                "reference": "6e042d17a0722c698cc40c83a4dd0c70b1bfd73c",
                 "shasum": ""
             },
             "require": {
@@ -22,12 +22,12 @@
             "require-dev": {
                 "ext-openssl": "*",
                 "phan/phan": "*",
-                "phpdocumentor/reflection": "^3.0|^5.1",
+                "phpdocumentor/reflection": "^3.0|^5.2|^6.1",
                 "symfony/phpunit-bridge": "*"
             },
-            "time": "2023-10-03T18:14:45+00:00",
+            "time": "2025-06-09T09:33:47+00:00",
             "type": "library",
-            "installation-source": "dist",
+            "installation-source": "source",
             "autoload": {
                 "psr-4": {
                     "Einvoicing\\": "src/"
@@ -55,23 +55,23 @@
             ],
             "support": {
                 "issues": "https://github.com/josemmo/einvoicing/issues",
-                "source": "https://github.com/josemmo/einvoicing/tree/v0.2.7"
+                "source": "https://github.com/josemmo/einvoicing/tree/v0.3.1"
             },
             "install-path": "../josemmo/einvoicing"
         },
         {
             "name": "josemmo/uxml",
-            "version": "v0.1.4",
-            "version_normalized": "0.1.4.0",
+            "version": "v0.1.5",
+            "version_normalized": "0.1.5.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/josemmo/uxml.git",
-                "reference": "bcd7d8e410285c642116294e01581374d6be696f"
+                "reference": "c902880d176f3626b9ffbd9c5e405f7d5987971f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/josemmo/uxml/zipball/bcd7d8e410285c642116294e01581374d6be696f",
-                "reference": "bcd7d8e410285c642116294e01581374d6be696f",
+                "url": "https://api.github.com/repos/josemmo/uxml/zipball/c902880d176f3626b9ffbd9c5e405f7d5987971f",
+                "reference": "c902880d176f3626b9ffbd9c5e405f7d5987971f",
                 "shasum": ""
             },
             "require": {
@@ -80,11 +80,13 @@
             },
             "require-dev": {
                 "phan/phan": "*",
+                "phpstan/phpstan": "*",
+                "phpstan/phpstan-strict-rules": "*",
                 "symfony/phpunit-bridge": "*"
             },
-            "time": "2022-05-28T16:43:25+00:00",
+            "time": "2025-12-04T22:22:15+00:00",
             "type": "library",
-            "installation-source": "dist",
+            "installation-source": "source",
             "autoload": {
                 "psr-4": {
                     "UXML\\": "src/"
@@ -108,7 +110,7 @@
             ],
             "support": {
                 "issues": "https://github.com/josemmo/uxml/issues",
-                "source": "https://github.com/josemmo/uxml/tree/v0.1.4"
+                "source": "https://github.com/josemmo/uxml/tree/v0.1.5"
             },
             "install-path": "../josemmo/uxml"
         }

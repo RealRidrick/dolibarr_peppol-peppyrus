@@ -412,6 +412,219 @@ function peppolAdminPrepareHead()
 	return $head;
 }
 
+/*
+ * Disclaimer of the original module (Cedric Marcoux, #24 and #25), since 2.15.0: nothing is sent through Peppol
+ * before an administrator accepted it. The acceptance is stored per entity in a private folder of the data
+ * directory, not in the Dolibarr constants.
+ */
+
+/**
+ * Version of the disclaimer text: increase it when the text changes, a new acceptance is then required.
+ */
+if (!defined('PEPPOL_DISCLAIMER_VERSION')) {
+	define('PEPPOL_DISCLAIMER_VERSION', 1);
+}
+
+/**
+ * Folder of the disclaimer acceptance records (#24).
+ *
+ * A private folder of the data directory, not the Dolibarr constants: no Dolibarr screen can write
+ * it, so an administrator (of this or another entity) cannot forge or alter the record through
+ * the constants page.
+ *
+ * @return string
+ */
+function peppolDisclaimerDir()
+{
+	return defined('PEPPOL_DISCLAIMER_DIR') ? PEPPOL_DISCLAIMER_DIR : DOL_DATA_ROOT . '/peppolpeppyrus_update';
+}
+
+/**
+ * Read all acceptance records.
+ *
+ * @return array<string,mixed>  entity => [version, user_id, login, date]
+ */
+function peppolDisclaimerRecords()
+{
+	$file = peppolDisclaimerDir() . '/disclaimer.json';
+	if (!is_file($file) || is_link($file)) {
+		return array();
+	}
+	$data = json_decode((string) @file_get_contents($file), true);
+	return is_array($data) ? $data : array();
+}
+
+/**
+ * Acceptance of the current disclaimer in the current entity (#24).
+ *
+ * @return array{version:int,user_id:int,login:string,date:int}|null  [version, user_id, login, date] or null when not accepted
+ */
+function peppolDisclaimerAcceptance()
+{
+	global $conf;
+	$records = peppolDisclaimerRecords();
+	$data = $records[(string) ((int) $conf->entity)] ?? null;
+	if (!is_array($data) || (int) ($data['version'] ?? 0) !== PEPPOL_DISCLAIMER_VERSION || empty($data['user_id']) || empty($data['date'])) {
+		return null;
+	}
+	return array('version' => (int) $data['version'], 'user_id' => (int) $data['user_id'], 'login' => (string) ($data['login'] ?? ''), 'date' => (int) $data['date']);
+}
+
+/**
+ * Warning shown while the disclaimer is not accepted (#25): why sending is blocked, and for
+ * administrators a link to the module setup where it can be accepted.
+ *
+ * @param User      $user  Current user
+ * @param Translate $langs Translations
+ * @return string          HTML (text escaped)
+ */
+function peppolDisclaimerNotice($user, $langs)
+{
+	$langs->load('peppol@peppolpeppyrus');
+	$html = dol_escape_htmltag($langs->transnoentitiesnoconv('PeppolDisclaimerNotAcceptedNotice'));
+	if (!empty($user->admin)) {
+		$html .= ' <a href="' . dol_escape_htmltag(dol_buildpath('/peppolpeppyrus/admin/setup.php', 1)) . '">' . dol_escape_htmltag($langs->transnoentitiesnoconv('PeppolDisclaimerGoToSetup')) . '</a>';
+	}
+	return $html;
+}
+
+/**
+ * Record that an administrator accepted the disclaimer (current record + append-only history).
+ *
+ * @param DoliDB $db   Database
+ * @param User   $user Administrator
+ * @return bool
+ */
+function peppolDisclaimerAccept($db, $user)
+{
+	global $conf;
+	if (empty($user->admin) || !empty($user->socid)) {
+		return false;
+	}
+	$dir = peppolDisclaimerDir();
+	if ((!is_dir($dir) && !@mkdir($dir, 0700, true)) || is_link($dir)) {
+		return false;
+	}
+	$lock = @fopen($dir . '/disclaimer.lock', 'c');
+	if (!$lock || !flock($lock, LOCK_EX)) {
+		return false;
+	}
+	$ok = false;
+	try {
+		$entry = array('version' => PEPPOL_DISCLAIMER_VERSION, 'user_id' => (int) $user->id, 'login' => (string) $user->login, 'date' => dol_now(), 'entity' => (int) $conf->entity);
+		// History first: an acceptance is never recorded without its trace
+		$log = $dir . '/disclaimer.log';
+		if (is_link($log)) {
+			return false;
+		}
+		$line = json_encode($entry) . "\n";
+		$fh = @fopen($log, 'ab');
+		if (!$fh || fwrite($fh, $line) !== strlen($line) || !fclose($fh)) {
+			return false;
+		}
+		@chmod($log, 0600);
+		$file = $dir . '/disclaimer.json';
+		$records = peppolDisclaimerRecords();
+		// Never overwrite a record file that cannot be read: the other entities would lose their acceptance
+		if (is_file($file) && !$records && trim((string) @file_get_contents($file)) !== '') {
+			return false;
+		}
+		$records[(string) ((int) $conf->entity)] = $entry;
+		$json = json_encode($records);
+		$tmp = $dir . '/disclaimer-' . bin2hex(random_bytes(8)) . '.tmp';
+		$fh = @fopen($tmp, 'xb');
+		if (!$fh) {
+			return false;
+		}
+		$ok = fwrite($fh, $json) === strlen($json);
+		$ok = fclose($fh) && $ok;
+		@chmod($tmp, 0600);
+		$ok = $ok && @rename($tmp, $dir . '/disclaimer.json');
+		if (!$ok) {
+			@unlink($tmp);
+		}
+	} finally {
+		flock($lock, LOCK_UN);
+		fclose($lock);
+	}
+	dol_syslog('peppolpeppyrus disclaimer version ' . PEPPOL_DISCLAIMER_VERSION . ' accepted by user ' . ((int) $user->id) . ' in entity ' . ((int) $conf->entity) . ($ok ? '' : ' (not saved)'), LOG_NOTICE);
+	return $ok;
+}
+
+/**
+ * Invoice that never goes through Peppol (since 2.15.0, setting PEPPOL_EXCLUDE_CARE_CLAIMS, on by default):
+ * - invoice template onszorg_zvw of the module Ons-facturatie: a care claim (ZVW, WLZ), sent through Vecozo;
+ * - invoice template onszorg_oa: subcontracting;
+ * - a line with a service of the funding stream ZVW or WLZ (module Ons-facturatie).
+ * Such invoices contain health data and have their own channel.
+ *
+ * @param string   $model  model_pdf of the invoice
+ * @param string[] $flows  Funding streams of the lines (ZVW, WLZ, WMO, ...)
+ * @return bool
+ */
+function peppolIsCareClaim($model, $flows)
+{
+	if (in_array((string) $model, array('onszorg_zvw', 'onszorg_oa'), true)) {
+		return true;
+	}
+	foreach ($flows as $flow) {
+		if (in_array(strtoupper(trim((string) $flow)), array('ZVW', 'WLZ'), true)) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
+ * Is this invoice excluded from Peppol (since 2.15.0)? Reads the funding streams of the lines from the services of
+ * the module Ons-facturatie when it is enabled; no hard dependency.
+ *
+ * @param DoliDB   $db      Database
+ * @param \Facture $facture Invoice
+ * @return bool
+ */
+function peppolInvoiceIsExcluded($db, $facture)
+{
+	global $conf;
+	if (!getDolGlobalInt('PEPPOL_EXCLUDE_CARE_CLAIMS', 1)) {
+		return false;
+	}
+	$flows = array();
+	if (isModEnabled('onsfacturatie') && (int) $facture->id > 0) {
+		$sql = "SELECT DISTINCT p.stroom FROM " . MAIN_DB_PREFIX . "facturedet AS d";
+		$sql .= " INNER JOIN " . MAIN_DB_PREFIX . "onsfacturatie_prestatie AS p ON p.fk_product = d.fk_product AND p.entity = " . ((int) $conf->entity);
+		$sql .= " WHERE d.fk_facture = " . ((int) $facture->id) . " AND d.fk_product > 0";
+		$resql = $db->query($sql);
+		if ($resql) {
+			while ($obj = $db->fetch_object($resql)) {
+				$flows[] = (string) $obj->stroom;
+			}
+			$db->free($resql);
+		}
+	}
+	return peppolIsCareClaim((string) $facture->model_pdf, $flows);
+}
+
+/**
+ * Send an approval (Invoice Response AP) to the supplier on booking (since 2.15.0, per supplier): the choice on the
+ * third party (extra field peppol_ir_approval) wins over the setting PEPPOL_IR_SEND_APPROVAL; empty follows it.
+ *
+ * @param bool   $general Setting PEPPOL_IR_SEND_APPROVAL
+ * @param string $choice  Choice on the third party: 'aan' (always), 'uit' (never) or empty
+ * @return bool
+ */
+function peppolSendApprovalFor($general, $choice)
+{
+	$choice = strtolower(trim((string) $choice));
+	if ($choice === 'aan') {
+		return true;
+	}
+	if ($choice === 'uit') {
+		return false;
+	}
+	return (bool) $general;
+}
+
 /**
  * return schema identifyer from vat number
  *
@@ -624,6 +837,12 @@ function peppolGetAPObject()
 function peppolSendToAccessPoint($filename, $invoice)
 {
 	global $langs, $conf, $user, $db;
+	// Nothing is sent before an administrator accepted the disclaimer (#24)
+	if (!peppolDisclaimerAcceptance()) {
+		$langs->load('peppol@peppolpeppyrus');
+		setEventMessages($langs->trans('PeppolDisclaimerNotAccepted'), null, 'errors');
+		return;
+	}
 	$obj = peppolGetAPObject();
 	if ($obj) {
 		$obj->sendToAccessPoint($filename, $invoice);

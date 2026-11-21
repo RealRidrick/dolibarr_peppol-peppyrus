@@ -136,6 +136,16 @@ class Peppol
 			dol_syslog("peppol:: makePDF _invoice ref is not set, early return", LOG_WARNING);
 			return -2;
 		}
+		// Since 2.15.0: a care claim (ZVW, WLZ) or subcontracting invoice never goes through Peppol. No Peppol file, and
+		// an earlier file is removed, so that it can not be sent by hand or by the scheduled job either.
+		if (peppolInvoiceIsExcluded($this->db, $objFacture)) {
+			$xmlFile = $conf->facture->dir_output . '/' . dol_sanitizeFileName($objFacture->ref) . '/' . dol_sanitizeFileName($objFacture->ref) . '_peppol.xml';
+			if (dol_is_file($xmlFile)) {
+				dol_delete_file($xmlFile, 0, 1);
+			}
+			dol_syslog("peppol:: makePDF invoice id=" . ((int) $objFacture->id) . " is a care claim or subcontracting invoice, no Peppol file");
+			return 0;
+		}
 
 		//nes idea - externalize pappol vat rules
 		// $vatHandler = new PeppolVatExemption($this->db);
@@ -618,7 +628,8 @@ class Peppol
 				$meansCodeAndLabel = dolibarrToPeppolMeansCode($objFacture->mode_reglement_code);
 				if (is_array($meansCodeAndLabel) && $meansCodeAndLabel['code'] != '' && $meansCodeAndLabel['label'] != "") {
 					$payment->setId($objFacture->ref); //référence du virement
-					$payment->setTerms($paymentTerms);
+					// Since 2.15.0 (einvoicing 0.3): the payment terms belong to the invoice, not to the payment
+					$inv->setPaymentTerms($paymentTerms);
 					$payment->setMeansCode($meansCodeAndLabel['code']); //dol_print_date($objFacture->date_lim_reglement, "dayrfc")
 					$payment->setMeansText($meansCodeAndLabel['label']);
 					if (!empty($bank->bic)) {
@@ -630,7 +641,7 @@ class Peppol
 						$transfert->setAccountName($bank->bank);
 					}
 					$payment->addTransfer($transfert);
-					$inv->setPayment($payment);
+					$inv->addPayment($payment);
 				}
 			}
 		} else {
