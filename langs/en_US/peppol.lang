@@ -556,3 +556,30 @@ peppolAgendaReason = Reason: %s
 peppolAgendaPeppolIdLinked = Peppol ID linked
 peppolAgendaPeppolIdNote = Peppol ID: %s (from the list of possible Peppol IDs)
 peppolAgendaPeppolIdBulk = Peppol ID linked to %s third parties
+
+# Since 2.15.0: disclaimer of the original module (#24, #25)
+PeppolDisclaimerTitle = Disclaimer - please read
+PeppolDisclaimerIntro = This module is free software provided "as is", without any warranty, express or implied, as stated in the GNU General Public License v3 (sections 15 and 16). Its author and contributors are not affiliated with Peppyrus, OpenPeppol or any tax administration.
+PeppolDisclaimerItem1 = You remain solely responsible for your invoices and credit notes, their amounts, VAT and legal mentions, and for checking that each document is correctly sent and received.
+PeppolDisclaimerItem2 = Test the module first (test mode of the access point) and keep regular backups of your Dolibarr data.
+PeppolDisclaimerItem3 = Check each new version before relying on it.
+PeppolDisclaimerItem4 = The availability and the behaviour of the access point and of the Peppol network are outside the control of the module.
+PeppolDisclaimerLiability = To the extent permitted by applicable law, the author and contributors accept no liability for any direct or indirect damage, including financial loss, loss of profit, penalties, fines, late payment, rejected, duplicated or lost documents, data loss or business interruption, arising from the use of, or the inability to use, this module, its updates or the services it connects to.
+PeppolDisclaimerLaw = Nothing in this notice excludes or limits a liability that cannot be excluded or limited by law.
+PeppolDisclaimerAcceptLabel = I have read this disclaimer and I accept it on behalf of the organisation using this Dolibarr
+PeppolDisclaimerAcceptButton = Accept
+PeppolDisclaimerAcceptedBy = Accepted by %s on %s
+PeppolDisclaimerNotAccepted = An administrator must accept the disclaimer in the setup of the Peppol module before documents can be sent
+PeppolDisclaimerMustTick = Tick the box to accept the disclaimer
+PeppolDisclaimerNotAcceptedNotice = Peppol sending is disabled until an administrator accepts the disclaimer of the Peppol module.
+PeppolDisclaimerGoToSetup = Open the Peppol module setup
+
+# Since 2.15.0: care claims never through Peppol (module Ons-facturatie)
+PEPPOL_EXCLUDE_CARE_CLAIMS = Never send care claims and subcontracting invoices through Peppol
+PEPPOL_EXCLUDE_CARE_CLAIMSTooltip = Invoices with the template onszorg_zvw or onszorg_oa, or with a service of the funding stream ZVW or WLZ (module Ons-facturatie), get no Peppol file and are never sent. They contain health data and go through Vecozo.
+PeppolCareClaimNever = This is a care claim (ZVW or WLZ, through Vecozo) or a subcontracting invoice. It is not sent through Peppol.
+# Since 2.15.0: approval per supplier
+PeppolIrApproval = Approval via Peppol
+PeppolIrApprovalAan = Always send
+PeppolIrApprovalUit = Never send
+PeppolIrApprovalTooltip = Send an approval (Invoice Response) through Peppol to this supplier when an incoming invoice is booked. Empty follows the setting of the Peppol module. Only sent when the supplier can receive it.

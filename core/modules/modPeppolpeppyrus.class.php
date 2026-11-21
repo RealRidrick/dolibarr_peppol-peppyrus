@@ -59,7 +59,7 @@ class modPeppolpeppyrus extends DolibarrModules
 		$this->editor_url = 'https://github.com/RealRidrick/dolibarr_peppol-peppyrus';
 
 		// Possible values for version are: 'development', 'experimental', 'dolibarr', 'dolibarr_deprecated' or a version string like 'x.y.z'
-		$this->version = '2.14.2';
+		$this->version = '2.15.0';
 		// File with the latest version number (VERSION in the public repository), read by checkForUpdate()
 		$this->url_last_version = 'https://raw.githubusercontent.com/RealRidrick/dolibarr_peppol-peppyrus/main/VERSION';
 
@@ -442,6 +442,8 @@ class modPeppolpeppyrus extends DolibarrModules
 		$result = $extrafields->addExtraField('peppol_id',  $langs->trans('PeppolSpecificID'),    		'varchar', 1101, 100, 'thirdparty', 0, 0, '', null, 1, '', 1, $langs->trans('PeppolSpecificIDTooltip'), '', '', 'peppol@peppolpeppyrus', '$conf->peppolpeppyrus->enabled');
 		$result = $extrafields->addExtraField('peppol_id',  $langs->trans('PeppolSpecificInvoiceID'),   'varchar', 1101, 100, 'facture', 0, 0, '', null, 0, '', 5, $langs->trans('PeppolSpecificInvoiceIDTooltip'), '', '', 'peppol@peppolpeppyrus', '$conf->peppolpeppyrus->enabled');
 		$result = $extrafields->addExtraField('peppol_id',  $langs->trans('PeppolSpecificInvoiceID'),   'varchar', 1101, 100, 'facture_fourn', 0, 0, '', null, 0, '', 5, $langs->trans('PeppolSpecificInvoiceIDTooltip'), '', '', 'peppol@peppolpeppyrus', '$conf->peppolpeppyrus->enabled');
+		// Since 2.15.0: per supplier whether an approval goes through Peppol after booking (empty = general setting)
+		$result = $extrafields->addExtraField('peppol_ir_approval', 'PeppolIrApproval', 'select', 1102, '', 'thirdparty', 0, 0, '', array('options' => array('aan' => 'PeppolIrApprovalAan', 'uit' => 'PeppolIrApprovalUit')), 1, '', 1, 'PeppolIrApprovalTooltip', '', '', 'peppol@peppolpeppyrus', '$conf->peppolpeppyrus->enabled');
 
 		// Since 2.12.0 no webhook any more (Peppyrus has no webhooks): remove its secret key
 		require_once DOL_DOCUMENT_ROOT . '/core/lib/admin.lib.php';

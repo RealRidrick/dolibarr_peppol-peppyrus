@@ -115,6 +115,12 @@ class PeppolAutoSend
 			$this->output = $this->error;
 			return 1;
 		}
+		// Since 2.15.0: nothing is sent before an administrator accepted the disclaimer (#24)
+		if (!peppolDisclaimerAcceptance()) {
+			$this->error = $langs->trans('PeppolDisclaimerNotAccepted');
+			$this->output = $this->error;
+			return 1;
+		}
 		$ap = call_user_func($this->apFactory);
 		if (!is_object($ap) || !method_exists($ap, 'sendToAccessPoint')) {
 			$this->error = $langs->trans('peppolInboxFetchNoAccessPoint');
@@ -192,6 +198,10 @@ class PeppolAutoSend
 		$inv = new Facture($this->db);
 		if ($inv->fetch($id) <= 0) {
 			return -1;
+		}
+		// Since 2.15.0: a care claim (ZVW, WLZ) or subcontracting invoice never goes through Peppol; skipped without error
+		if (peppolInvoiceIsExcluded($this->db, $inv)) {
+			return 0;
 		}
 		$inv->fetch_thirdparty();
 		$inv->fetch_optionals();

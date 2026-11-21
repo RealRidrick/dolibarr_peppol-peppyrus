@@ -432,7 +432,7 @@ class PeppolBooking
 			$this->invoiceId = $existing;
 			$this->linkDocument($pi, $user, $existing, $socid);
 			$this->warnings[] = $langs->trans('peppolBookLinkedExisting');
-			$approval = $this->sendApproval($pi, $user, $data);
+			$approval = $this->sendApproval($pi, $user, $data, (string) ($soc->array_options['options_peppol_ir_approval'] ?? ''));
 			$this->agendaBooked($pi, $user, $data, $existing, $socid, true, $approval);
 			return $existing;
 		}
@@ -486,7 +486,7 @@ class PeppolBooking
 
 		$this->attachFiles($inv, $pi, $data['pdf']);
 		$this->linkDocument($pi, $user, (int) $id, $socid);
-		$approval = $this->sendApproval($pi, $user, $data);
+		$approval = $this->sendApproval($pi, $user, $data, (string) ($soc->array_options['options_peppol_ir_approval'] ?? ''));
 		$this->agendaBooked($pi, $user, $data, (int) $id, $socid, false, $approval);
 		dol_syslog('PeppolBooking::book document ' . ((int) $pi->id) . ' booked as supplier invoice ' . ((int) $id) . ', lines ' . count($data['lines']) . ($this->validated ? ', validated' : ', draft') . ($this->supplierCreated ? ', supplier created' : ''));
 		return (int) $id;
@@ -589,13 +589,15 @@ class PeppolBooking
 	 * @param	object	$pi		Peppolimport
 	 * @param	User	$user	User
 	 * @param	array<string,mixed>	$data	Result of parse()
+	 * @param	string	$choice	Since 2.15.0: choice on the third party (extra field peppol_ir_approval): 'aan', 'uit' or empty
 	 * @return	bool	Approval sent now (since 2.14.0, for the agenda event)
 	 */
-	private function sendApproval($pi, $user, $data)
+	private function sendApproval($pi, $user, $data, $choice = '')
 	{
 		global $langs;
 
-		if (!getDolGlobalInt('PEPPOL_IR_SEND_APPROVAL', 1) || (string) ($pi->response_code ?? '') === 'AP' || empty($pi->senderID) || $data['date'] === null) {
+		// Since 2.15.0: the choice on the third party wins over the general setting
+		if (!peppolSendApprovalFor(getDolGlobalInt('PEPPOL_IR_SEND_APPROVAL', 1) === 1, $choice) || (string) ($pi->response_code ?? '') === 'AP' || empty($pi->senderID) || $data['date'] === null) {
 			return false;
 		}
 		$ap = call_user_func($this->apFactory);

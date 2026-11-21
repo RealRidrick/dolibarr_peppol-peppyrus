@@ -112,6 +112,10 @@ Billing > Peppol > Incoming documents shows by default what still has to be proc
 
 On the card of an incoming document, **Reject** asks a reason and sends the supplier an Invoice Response (Peppol BIS 63); the document is then no longer booked. On **Book**, the supplier receives an approval, unless the setting "Send approval to the supplier on booking" is off.
 
+## Care claims and subcontracting (module Ons-facturatie)
+
+With the setting *Never send care claims and subcontracting invoices through Peppol* (on by default), invoices with the template `onszorg_zvw` or `onszorg_oa`, or with a service of the funding stream ZVW or WLZ, are never sent through Peppol. Without the module Ons-facturatie this changes nothing.
+
 ## Daily check of failed deliveries
 
 A daily scheduled job ("Peppol: daily check of invoices the access point could not deliver") reads the folder FAILED at Peppyrus. For each own invoice that could not be delivered, one line "failed" is added to the Peppol tab of the invoice and, with the agenda on, an event on the invoice. The invoice itself does not change. The user of the scheduled job needs the right "Peppol: read".

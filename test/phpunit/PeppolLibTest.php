@@ -455,4 +455,73 @@ class PeppolLibTest extends TestCase
 		$this->assertSame('FA0001_peppol.xml', peppolFindFileToUse($inv, ''));
 		unset($_GET['selectFilename']);
 	}
+
+	/**
+	 * Since 2.15.0: care claims (ZVW, WLZ) and subcontracting invoices never go through Peppol
+	 *
+	 * @return void
+	 */
+	public function testCareClaim()
+	{
+		$this->assertTrue(peppolIsCareClaim('onszorg_zvw', array()));
+		$this->assertTrue(peppolIsCareClaim('onszorg_oa', array()));
+		$this->assertTrue(peppolIsCareClaim('crabe', array('WMO', 'wlz')));
+		$this->assertTrue(peppolIsCareClaim('', array(' ZVW ')));
+		$this->assertFalse(peppolIsCareClaim('crabe', array('WMO', 'PGB')));
+		$this->assertFalse(peppolIsCareClaim('onszorg_wmo', array()));
+	}
+
+	/**
+	 * Since 2.15.0: the choice on the third party wins over the general setting for the approval
+	 *
+	 * @return void
+	 */
+	public function testSendApprovalFor()
+	{
+		$this->assertFalse(peppolSendApprovalFor(false, ''));
+		$this->assertTrue(peppolSendApprovalFor(true, ''));
+		$this->assertTrue(peppolSendApprovalFor(false, 'aan'));
+		$this->assertFalse(peppolSendApprovalFor(true, 'uit'));
+		$this->assertTrue(peppolSendApprovalFor(true, 'other'));
+	}
+
+	/**
+	 * Since 2.15.0: the disclaimer, accepted by an administrator only, per entity
+	 *
+	 * @return void
+	 */
+	public function testDisclaimerAcceptance()
+	{
+		global $db, $conf;
+		require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
+		require_once DOL_DOCUMENT_ROOT.'/core/lib/files.lib.php';
+		if (!defined('PEPPOL_DISCLAIMER_DIR')) {
+			define('PEPPOL_DISCLAIMER_DIR', sys_get_temp_dir().'/peppoltest-disclaimer-'.getmypid());
+		}
+		dol_delete_dir_recursive(PEPPOL_DISCLAIMER_DIR);
+		$this->assertNull(peppolDisclaimerAcceptance());
+
+		$plain = new User($db);
+		$plain->id = 7;
+		$plain->login = 'test';
+		$plain->admin = 0;
+		$this->assertFalse(peppolDisclaimerAccept($db, $plain));
+
+		$admin = new User($db);
+		$admin->id = 8;
+		$admin->login = 'admin';
+		$admin->admin = 1;
+		$this->assertTrue(peppolDisclaimerAccept($db, $admin));
+		$accepted = peppolDisclaimerAcceptance();
+		$this->assertNotNull($accepted);
+		$this->assertSame(8, $accepted['user_id']);
+
+		$entity = $conf->entity;
+		$conf->entity = 987654;
+		$this->assertNull(peppolDisclaimerAcceptance());
+		$conf->entity = $entity;
+
+		dol_delete_dir_recursive(PEPPOL_DISCLAIMER_DIR);
+		$this->assertNull(peppolDisclaimerAcceptance());
+	}
 }

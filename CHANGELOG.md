@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.15.0
+
+- **Care claims never through Peppol** (new setting *Never send care claims and subcontracting invoices through Peppol*, on by default). Invoices with the template `onszorg_zvw` or `onszorg_oa`, or with a service of the funding stream ZVW or WLZ (module Ons-facturatie), get no Peppol file and are refused when sent by hand or by the scheduled job. They contain health data and go through Vecozo. Without the module Ons-facturatie nothing changes.
+- **Approval per supplier.** A new extra field **Approval via Peppol** on the third party card (*Always send* / *Never send*) wins over the setting *Send approval to the supplier on booking*; empty follows the setting. Still only sent when the supplier can receive it.
+- **Disclaimer of the original module** (Cedric Marcoux, #24 and #25). Shown at the top of the setup page; nothing is sent through Peppol (by hand, from the invoice card or by the scheduled job) before an administrator accepted it. The acceptance is stored per entity in `documents/peppolpeppyrus_update`, not in the Dolibarr constants. The Updates tab of the original module is still not included: it would replace this fork with the original module.
+- **Libraries updated:** `josemmo/einvoicing` 0.2.7 → 0.3.1 and `josemmo/uxml` 0.1.4 → 0.1.5 (einvoicing 0.3.1 does not accept uxml 0.2 yet). The payment terms are now set on the invoice (`setPaymentTerms()`) and the payment is added with `addPayment()`; the old calls are deprecated in 0.3. The generated Peppol file of a test invoice with a bank transfer is identical to the one of 0.2.7.
+- Tests in `PeppolLibTest`: care claims, approval per supplier, disclaimer.
+
+**After updating:** deactivate and reactivate the module (Setup, Modules), so that the extra field *Approval via Peppol* is created. Flush memcached and restart PHP. Then open the setup page, read the disclaimer and click **Accept**: until then nothing is sent through Peppol.
+
 ## 2.14.2
 
 Two fixes of the original module (Cedric Marcoux, 2.3.1) that were lost when its history was merged into this fork are restored.
