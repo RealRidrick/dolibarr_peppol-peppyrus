@@ -7,7 +7,7 @@
   - *Never send invoices with a product or service of this category through Peppol* (`PEPPOL_EXCLUDE_CATEGORY`): a product category.
 - Both are empty by default. The setting of 2.15.0 (`PEPPOL_EXCLUDE_CARE_CLAIMS`) is removed when the setup is saved; until then it has no effect any more.
 - The message when sending is refused says which setting excludes the invoice.
-- Tests: the tests of 2.14.2 (only the Peppol XML) and 2.15.0 (disclaimer) failed on Dolibarr 18 (no database and no hook manager in the unit tests); they use a stand-in now.
+- Tests: the tests of 2.14.2 (only the Peppol XML) and 2.15.0 (disclaimer) failed on Dolibarr 18 (no database and no hook manager in the unit tests); they use a stand-in now (also on 24.0.2, whose Facture requires a DoliDB).
 - The hook class declares `$warnings` (Dolibarr empties it before every hook; without it PHP 8.2+ reports a deprecated dynamic property). The filter in `Peppolimport::fetchAll()` carries the reason for the security check of dolibarr-module on the line itself.
 
 **After updating:** flush memcached and restart PHP. The module does not need to be deactivated. Fill in the two settings in the setup of the module **before** the next automatic send if invoices must stay out of Peppol (2.15.0 excluded some by itself).

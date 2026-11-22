@@ -532,8 +532,8 @@ class PeppolLibTest extends TestCase
 	}
 
 	/**
-	 * The database of the test run. Without one: null where the constructors of Dolibarr accept that (19 and newer;
-	 * PHP refuses a mock of DoliDB there), a stand-in where they require a DoliDB (Dolibarr 18) (since 2.16.0)
+	 * The database of the test run. Without one: null where the constructors of Dolibarr accept that, a stand-in where
+	 * they require a DoliDB (Dolibarr 18 and 24.0.2) (since 2.16.0)
 	 *
 	 * @return ?DoliDB
 	 */
@@ -548,7 +548,8 @@ class PeppolLibTest extends TestCase
 		if (!$parameter->hasType() || $parameter->allowsNull()) {
 			return null;
 		}
-		require_once DOL_DOCUMENT_ROOT.'/core/db/DoliDB.class.php';
-		return $this->createMock(DoliDB::class);
+		// A concrete driver: the abstract DoliDB has a constant that only its drivers define (Dolibarr 24.0.2)
+		require_once DOL_DOCUMENT_ROOT.'/core/db/mysqli.class.php';
+		return $this->createMock(DoliDBMysqli::class);
 	}
 }
