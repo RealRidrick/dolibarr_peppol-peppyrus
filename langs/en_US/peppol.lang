@@ -574,12 +574,16 @@ PeppolDisclaimerMustTick = Tick the box to accept the disclaimer
 PeppolDisclaimerNotAcceptedNotice = Peppol sending is disabled until an administrator accepts the disclaimer of the Peppol module.
 PeppolDisclaimerGoToSetup = Open the Peppol module setup
 
-# Since 2.15.0: care claims never through Peppol (module Ons-facturatie)
-PEPPOL_EXCLUDE_CARE_CLAIMS = Never send care claims and subcontracting invoices through Peppol
-PEPPOL_EXCLUDE_CARE_CLAIMSTooltip = Invoices with the template onszorg_zvw or onszorg_oa, or with a service of the funding stream ZVW or WLZ (module Ons-facturatie), get no Peppol file and are never sent. They contain health data and go through Vecozo.
-PeppolCareClaimNever = This is a care claim (ZVW or WLZ, through Vecozo) or a subcontracting invoice. It is not sent through Peppol.
 # Since 2.15.0: approval per supplier
 PeppolIrApproval = Approval via Peppol
 PeppolIrApprovalAan = Always send
 PeppolIrApprovalUit = Never send
 PeppolIrApprovalTooltip = Send an approval (Invoice Response) through Peppol to this supplier when an incoming invoice is booked. Empty follows the setting of the Peppol module. Only sent when the supplier can receive it.
+
+# Since 2.16.0: invoices that never go through Peppol
+PEPPOL_EXCLUDE_MODELS = Never send invoices with these PDF templates through Peppol
+PEPPOL_EXCLUDE_MODELSTooltip = Names of PDF templates of invoices, separated by commas (for example crabe,sponge). An invoice with one of these templates gets no Peppol file and is never sent, not by hand either. Empty: none.
+PEPPOL_EXCLUDE_CATEGORY = Never send invoices with a product or service of this category through Peppol
+PEPPOL_EXCLUDE_CATEGORYTooltip = Product category. An invoice with at least one line with a product or service in this category gets no Peppol file and is never sent, not by hand either. For example invoices with health data that go through their own channel. Empty: none.
+PeppolModelNever = The PDF template of this invoice is in the list of templates that never go through Peppol (setup of the module).
+PeppolCategoryNever = This invoice has a product or service of the category that never goes through Peppol (setup of the module).

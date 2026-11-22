@@ -38,6 +38,11 @@ class ActionsPeppolpeppyrus
 	public $errors = array();
 
 	/**
+	 * @var string[] Warnings; Dolibarr empties this property before every hook (hookmanager), since 2.16.0 declared
+	 */
+	public $warnings = array();
+
+	/**
 	 * @var array<string, mixed> Hook results. Propagated to $hookmanager->resArray for later reuse
 	 */
 	public $results = array();
