@@ -509,6 +509,7 @@ class Peppolimport extends \CommonObject
 		}
 		if (count($sqlwhere) > 0) {
 			// Every part of $sqlwhere above is cast, or built with sanitize() or escape() between quotes, on a column name matching ^t\.[a-z0-9_]+$
+			// beveiliging-uitzondering: sql-escape every part of $sqlwhere is cast or escaped where it is built (see above)
 			$sql .= ' AND (' . implode(' ' . $filtermode . ' ', $sqlwhere) . ')'; // @phan-suppress-current-line SqlInjection -- parts built safely above
 		}
 

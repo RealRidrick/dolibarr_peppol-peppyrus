@@ -557,32 +557,73 @@ function peppolDisclaimerAccept($db, $user)
 }
 
 /**
- * Invoice that never goes through Peppol (since 2.15.0, setting PEPPOL_EXCLUDE_CARE_CLAIMS, on by default):
- * - invoice template onszorg_zvw of the module Ons-facturatie: a care claim (ZVW, WLZ), sent through Vecozo;
- * - invoice template onszorg_oa: subcontracting;
- * - a line with a service of the funding stream ZVW or WLZ (module Ons-facturatie).
- * Such invoices contain health data and have their own channel.
+ * Why an invoice never goes through Peppol (since 2.16.0, general settings instead of the rule of 2.15.0):
+ * - PEPPOL_EXCLUDE_MODELS: the PDF template of the invoice is in this list;
+ * - PEPPOL_EXCLUDE_CATEGORY: a line has a product or service in this product category.
+ * For example invoices with health data that have their own channel, or any other kind of invoice a company does not
+ * want to send through Peppol.
  *
- * @param string   $model  model_pdf of the invoice
- * @param string[] $flows  Funding streams of the lines (ZVW, WLZ, WMO, ...)
- * @return bool
+ * @param string   $model      model_pdf of the invoice
+ * @param bool     $inCategory A line has a product or service in the excluded category
+ * @param string[] $models     Excluded PDF templates
+ * @return string 'model', 'category' or '' (may go through Peppol)
  */
-function peppolIsCareClaim($model, $flows)
+function peppolExclusionReason($model, $inCategory, $models)
 {
-	if (in_array((string) $model, array('onszorg_zvw', 'onszorg_oa'), true)) {
-		return true;
+	$model = trim((string) $model);
+	if ($model !== '' && in_array($model, $models, true)) {
+		return 'model';
 	}
-	foreach ($flows as $flow) {
-		if (in_array(strtoupper(trim((string) $flow)), array('ZVW', 'WLZ'), true)) {
-			return true;
-		}
-	}
-	return false;
+	return $inCategory ? 'category' : '';
 }
 
 /**
- * Is this invoice excluded from Peppol (since 2.15.0)? Reads the funding streams of the lines from the services of
- * the module Ons-facturatie when it is enabled; no hard dependency.
+ * The list of excluded PDF templates from the setting (comma separated, only letters, digits, - and _)
+ *
+ * @param string $value Setting PEPPOL_EXCLUDE_MODELS
+ * @return string[]
+ */
+function peppolExcludedModels($value)
+{
+	$out = array();
+	foreach (explode(',', (string) $value) as $model) {
+		$model = trim($model);
+		if ($model !== '' && preg_match('/^[A-Za-z0-9_-]{1,64}$/', $model)) {
+			$out[$model] = $model;
+		}
+	}
+	return array_values($out);
+}
+
+/**
+ * Why this invoice is excluded from Peppol (since 2.16.0), from the settings PEPPOL_EXCLUDE_MODELS and
+ * PEPPOL_EXCLUDE_CATEGORY
+ *
+ * @param DoliDB   $db      Database
+ * @param \Facture $facture Invoice
+ * @return string 'model', 'category' or ''
+ */
+function peppolInvoiceExclusion($db, $facture)
+{
+	$models = peppolExcludedModels(getDolGlobalString('PEPPOL_EXCLUDE_MODELS'));
+	$category = getDolGlobalInt('PEPPOL_EXCLUDE_CATEGORY');
+	$inCategory = false;
+	if ($category > 0 && (int) $facture->id > 0) {
+		$sql = "SELECT COUNT(*) AS n FROM " . MAIN_DB_PREFIX . "facturedet AS d";
+		$sql .= " INNER JOIN " . MAIN_DB_PREFIX . "categorie_product AS cp ON cp.fk_product = d.fk_product";
+		$sql .= " WHERE d.fk_facture = " . ((int) $facture->id) . " AND cp.fk_categorie = " . ((int) $category);
+		$resql = $db->query($sql);
+		if ($resql) {
+			$obj = $db->fetch_object($resql);
+			$inCategory = $obj && (int) $obj->n > 0;
+			$db->free($resql);
+		}
+	}
+	return peppolExclusionReason((string) $facture->model_pdf, $inCategory, $models);
+}
+
+/**
+ * Is this invoice excluded from Peppol (since 2.15.0)? See peppolInvoiceExclusion().
  *
  * @param DoliDB   $db      Database
  * @param \Facture $facture Invoice
@@ -590,24 +631,7 @@ function peppolIsCareClaim($model, $flows)
  */
 function peppolInvoiceIsExcluded($db, $facture)
 {
-	global $conf;
-	if (!getDolGlobalInt('PEPPOL_EXCLUDE_CARE_CLAIMS', 1)) {
-		return false;
-	}
-	$flows = array();
-	if (isModEnabled('onsfacturatie') && (int) $facture->id > 0) {
-		$sql = "SELECT DISTINCT p.stroom FROM " . MAIN_DB_PREFIX . "facturedet AS d";
-		$sql .= " INNER JOIN " . MAIN_DB_PREFIX . "onsfacturatie_prestatie AS p ON p.fk_product = d.fk_product AND p.entity = " . ((int) $conf->entity);
-		$sql .= " WHERE d.fk_facture = " . ((int) $facture->id) . " AND d.fk_product > 0";
-		$resql = $db->query($sql);
-		if ($resql) {
-			while ($obj = $db->fetch_object($resql)) {
-				$flows[] = (string) $obj->stroom;
-			}
-			$db->free($resql);
-		}
-	}
-	return peppolIsCareClaim((string) $facture->model_pdf, $flows);
+	return peppolInvoiceExclusion($db, $facture) !== '';
 }
 
 /**

@@ -112,9 +112,13 @@ Billing > Peppol > Incoming documents shows by default what still has to be proc
 
 On the card of an incoming document, **Reject** asks a reason and sends the supplier an Invoice Response (Peppol BIS 63); the document is then no longer booked. On **Book**, the supplier receives an approval, unless the setting "Send approval to the supplier on booking" is off.
 
-## Care claims and subcontracting (module Ons-facturatie)
+## Invoices that never go through Peppol
 
-With the setting *Never send care claims and subcontracting invoices through Peppol* (on by default), invoices with the template `onszorg_zvw` or `onszorg_oa`, or with a service of the funding stream ZVW or WLZ, are never sent through Peppol. Without the module Ons-facturatie this changes nothing.
+Two settings keep invoices out of Peppol, for example invoices with health data that have their own channel:
+- *Never send invoices with these PDF templates through Peppol*: a list of PDF templates;
+- *Never send invoices with a product or service of this category through Peppol*: a product category.
+
+Such an invoice gets no Peppol file and is never sent, not by hand and not by the scheduled job. Both are empty by default.
 
 ## Daily check of failed deliveries
 

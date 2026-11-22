@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.16.1
+
+- Merge of 2.16.0 of the fork into the branch of the pull request to the original module: invoices are kept out of Peppol by general settings (PDF templates, product category) instead of the rule of 2.15.0 for one Dutch home care module. Keeps the Updates tab, the disclaimer, the webhook and the tests of the original module (2.13.4).
+
+**After updating:** flush memcached and restart PHP. The module does not need to be deactivated.
+
+## 2.16.0
+
+- **Invoices that never go through Peppol: general settings** instead of the rule of 2.15.0, which knew the templates and funding streams of one Dutch home care module. Now for every user and country:
+  - *Never send invoices with these PDF templates through Peppol* (`PEPPOL_EXCLUDE_MODELS`): a list of PDF templates;
+  - *Never send invoices with a product or service of this category through Peppol* (`PEPPOL_EXCLUDE_CATEGORY`): a product category.
+- Both are empty by default. The setting of 2.15.0 (`PEPPOL_EXCLUDE_CARE_CLAIMS`) is removed when the setup is saved; until then it has no effect any more.
+- The message when sending is refused says which setting excludes the invoice.
+- Tests: the tests of 2.14.2 (only the Peppol XML) and 2.15.0 (disclaimer) failed on Dolibarr 18 (no database and no hook manager in the unit tests); they use a stand-in now (also on 24.0.2, whose Facture requires a DoliDB).
+- The hook class declares `$warnings` (Dolibarr empties it before every hook; without it PHP 8.2+ reports a deprecated dynamic property). The filter in `Peppolimport::fetchAll()` carries the reason for the security check of dolibarr-module on the line itself.
+
+**After updating:** flush memcached and restart PHP. The module does not need to be deactivated. Fill in the two settings in the setup of the module **before** the next automatic send if invoices must stay out of Peppol (2.15.0 excluded some by itself).
+
 ## 2.15.2
 
 Merge of the fork's main (2.14.0–2.15.1) into the branch of the upstream pull request; keeps the Updates tab, the disclaimer, the webhook and the tests of the original module (2.13.4).
@@ -8,6 +26,7 @@ Merge of the fork's main (2.14.0–2.15.1) into the branch of the upstream pull 
 - From 2.13.4 and kept over main: the Updates tab (`admin/update.php`, `lib/peppolupdate.lib.php`, `release-signing-key.pub`, the update check reads `VERSION` of the original repository), the webhook (`public/hook.php`, its secret key is not removed when the module is reactivated), `scripts/` and `tests/run.php`, and the rights to send of the original module (`peppolUserCanSend()`, `peppolSendRefusalReason()`) for the button, the send action and the scheduled job. `peppol_search_directory.php` stays removed (`search.php` replaces it).
 
 **After updating:** deactivate and reactivate the module (Setup, Modules), so that the agenda event types of 2.14.0 and the extra field *Approval via Peppol* of 2.15.0 are created. Flush memcached and restart PHP. Then open the setup page and accept the disclaimer if that was not done yet: until then nothing is sent through Peppol.
+
 
 ## 2.15.1
 

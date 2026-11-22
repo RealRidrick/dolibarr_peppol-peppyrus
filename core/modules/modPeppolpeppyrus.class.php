@@ -59,7 +59,7 @@ class modPeppolpeppyrus extends DolibarrModules
 		$this->editor_url = '';
 
 		// Possible values for version are: 'development', 'experimental', 'dolibarr', 'dolibarr_deprecated' or a version string like 'x.y.z'
-		$this->version = '2.15.2';
+		$this->version = '2.16.1';
 		// File with the latest version number (VERSION in the public repository), read by checkForUpdate()
 		$this->url_last_version = 'https://raw.githubusercontent.com/cedric-marcoux/dolibarr_peppol-peppyrus/main/VERSION';
 
