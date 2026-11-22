@@ -115,7 +115,7 @@ class PeppolAutoSend
 			$this->output = $this->error;
 			return 1;
 		}
-		// Nothing is sent before an administrator accepted the disclaimer (#24)
+		// Since 2.15.0: nothing is sent before an administrator accepted the disclaimer (#24)
 		if (!peppolDisclaimerAcceptance()) {
 			$this->error = $langs->trans('PeppolDisclaimerNotAccepted');
 			$this->output = $this->error;
@@ -199,6 +199,10 @@ class PeppolAutoSend
 		if ($inv->fetch($id) <= 0) {
 			return -1;
 		}
+		// Since 2.15.0: a care claim (ZVW, WLZ) or subcontracting invoice never goes through Peppol; skipped without error
+		if (peppolInvoiceIsExcluded($this->db, $inv)) {
+			return 0;
+		}
 		$inv->fetch_thirdparty();
 		$inv->fetch_optionals();
 		$file = $conf->facture->dir_output . '/' . dol_sanitizeFileName($inv->ref) . '/' . dol_sanitizeFileName($inv->ref) . '_peppol.xml';
@@ -210,6 +214,10 @@ class PeppolAutoSend
 		if (!dol_is_file($file)) {
 			dol_syslog('PeppolAutoSend::sendOne invoice ' . ((int) $id) . ' no Peppol file, skipped', LOG_WARNING);
 			return 0;
+		}
+		// For the note of the agenda event (since 2.14.0)
+		if (property_exists($ap, 'automatic')) {
+			$ap->automatic = true;
 		}
 		$res = $ap->sendToAccessPoint($file, $inv);
 		dol_syslog('PeppolAutoSend::sendOne invoice ' . ((int) $id) . ' result ' . ((int) $res));

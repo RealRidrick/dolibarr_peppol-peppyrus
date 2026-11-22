@@ -503,7 +503,7 @@ class ActionsPeppolpeppyrus
 		$contextArray = explode(':', $parameters['context']);
 		if (in_array('invoicecard', $contextArray)) {
 			if (peppolIsInvoiceStatusEligible($object) && peppolUserCanSend($user) && !peppolDisclaimerAcceptance()) {
-				// Shown disabled with the reason until an administrator accepted the disclaimer (#24)
+				// Shown disabled with the reason until an administrator accepted the disclaimer (#24, #25)
 				$langs->load('peppol@peppolpeppyrus');
 				print '<div class="inline-block divButAction"><span class="butActionRefused classfortooltip" title="' . dol_escape_htmltag($langs->trans('PeppolDisclaimerNotAccepted')) . '">' . $langs->trans('peppolBtnSend') . '</span></div>';
 				// Visible explanation, not only a tooltip (#25)

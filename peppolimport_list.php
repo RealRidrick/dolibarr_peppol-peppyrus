@@ -326,7 +326,7 @@ if (empty($reshook)) {
 		$importHtml .= "<tbody>";
 		$i = 0;
 		foreach ($toselect as $oid) {
-			// Multicompany: ignore documents of other entities
+			// Multicompany: ignore documents of other entities (original module)
 			if ($object->fetch($oid) <= 0 || !peppolObjectIsInUserEntities($object)) {
 				continue;
 			}

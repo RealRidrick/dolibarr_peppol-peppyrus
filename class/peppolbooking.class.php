@@ -432,7 +432,8 @@ class PeppolBooking
 			$this->invoiceId = $existing;
 			$this->linkDocument($pi, $user, $existing, $socid);
 			$this->warnings[] = $langs->trans('peppolBookLinkedExisting');
-			$this->sendApproval($pi, $user, $data);
+			$approval = $this->sendApproval($pi, $user, $data, (string) ($soc->array_options['options_peppol_ir_approval'] ?? ''));
+			$this->agendaBooked($pi, $user, $data, $existing, $socid, true, $approval);
 			return $existing;
 		}
 
@@ -485,7 +486,8 @@ class PeppolBooking
 
 		$this->attachFiles($inv, $pi, $data['pdf']);
 		$this->linkDocument($pi, $user, (int) $id, $socid);
-		$this->sendApproval($pi, $user, $data);
+		$approval = $this->sendApproval($pi, $user, $data, (string) ($soc->array_options['options_peppol_ir_approval'] ?? ''));
+		$this->agendaBooked($pi, $user, $data, (int) $id, $socid, false, $approval);
 		dol_syslog('PeppolBooking::book document ' . ((int) $pi->id) . ' booked as supplier invoice ' . ((int) $id) . ', lines ' . count($data['lines']) . ($this->validated ? ', validated' : ', draft') . ($this->supplierCreated ? ', supplier created' : ''));
 		return (int) $id;
 	}
@@ -555,6 +557,22 @@ class PeppolBooking
 			$this->error = (string) $pi->error;
 			return -7;
 		}
+		// Since 2.14.0: agenda event on the supplier, only after the rejection is stored
+		if (peppolAgendaEnabled('AC_PEPPOL_REJECTED')) {
+			$socid = (int) ($pi->fk_supplier ?? 0);
+			if ($socid <= 0 && $data !== null) {
+				$socid = max(0, $this->findSupplier($data['supplier']));
+			}
+			$number = $data !== null ? (string) $data['number'] : '';
+			peppolAgendaEvent(
+				$this->db,
+				$user,
+				'AC_PEPPOL_REJECTED',
+				$langs->transnoentitiesnoconv('peppolAgendaRejected', $number),
+				$langs->transnoentitiesnoconv('peppolAgendaDocument', (string) ($pi->ref ?? '')) . "\n" . $langs->transnoentitiesnoconv('peppolAgendaReason', $note) . "\n" . $langs->transnoentitiesnoconv($res > 0 ? 'peppolAgendaRejectSent' : 'peppolAgendaRejectLocal'),
+				$socid
+			);
+		}
 		if ($res > 0) {
 			$this->notices[] = $langs->trans('peppolRejectSent');
 			return 1;
@@ -571,18 +589,20 @@ class PeppolBooking
 	 * @param	object	$pi		Peppolimport
 	 * @param	User	$user	User
 	 * @param	array<string,mixed>	$data	Result of parse()
-	 * @return	void
+	 * @param	string	$choice	Since 2.15.0: choice on the third party (extra field peppol_ir_approval): 'aan', 'uit' or empty
+	 * @return	bool	Approval sent now (since 2.14.0, for the agenda event)
 	 */
-	private function sendApproval($pi, $user, $data)
+	private function sendApproval($pi, $user, $data, $choice = '')
 	{
 		global $langs;
 
-		if (!getDolGlobalInt('PEPPOL_IR_SEND_APPROVAL', 1) || (string) ($pi->response_code ?? '') === 'AP' || empty($pi->senderID) || $data['date'] === null) {
-			return;
+		// Since 2.15.0: the choice on the third party wins over the general setting
+		if (!peppolSendApprovalFor(getDolGlobalInt('PEPPOL_IR_SEND_APPROVAL', 1) === 1, $choice) || (string) ($pi->response_code ?? '') === 'AP' || empty($pi->senderID) || $data['date'] === null) {
+			return false;
 		}
 		$ap = call_user_func($this->apFactory);
 		if (!is_object($ap) || !method_exists($ap, 'sendInvoiceResponse')) {
-			return;
+			return false;
 		}
 		$res = $ap->sendInvoiceResponse($pi, array(
 			'code' => 'AP',
@@ -596,9 +616,34 @@ class PeppolBooking
 				$pi->saveResponse($user, 'AP');
 			}
 			$this->notices[] = $langs->trans('peppolApprovalSent');
-		} else {
-			$this->warnings[] = $langs->trans('peppolApprovalNotSent', (string) $ap->error);
+			return true;
 		}
+		$this->warnings[] = $langs->trans('peppolApprovalNotSent', (string) $ap->error);
+		return false;
+	}
+
+	/**
+	 * Agenda event on the supplier invoice and the supplier after booking (since 2.14.0)
+	 *
+	 * @param	object	$pi			Peppolimport
+	 * @param	User	$user		User
+	 * @param	array<string,mixed>	$data	Result of parse()
+	 * @param	int		$invoiceId	Supplier invoice
+	 * @param	int		$socid		Supplier
+	 * @param	bool	$existing	Linked to a supplier invoice that already existed
+	 * @param	bool	$approval	Approval (AP) sent
+	 * @return	void
+	 */
+	private function agendaBooked($pi, $user, $data, $invoiceId, $socid, $existing, $approval)
+	{
+		global $langs;
+
+		if (!peppolAgendaEnabled('AC_PEPPOL_BOOKED')) {
+			return;
+		}
+		$number = (string) ($data['number'] ?? '');
+		$note = peppolAgendaBookedNote($langs, (string) ($pi->ref ?? ''), $number, $existing, !$existing && !$this->validated, $approval);
+		peppolAgendaEvent($this->db, $user, 'AC_PEPPOL_BOOKED', $langs->transnoentitiesnoconv('peppolAgendaBooked', $number), $note, (int) $socid, (int) $invoiceId, 'invoice_supplier');
 	}
 
 	/**

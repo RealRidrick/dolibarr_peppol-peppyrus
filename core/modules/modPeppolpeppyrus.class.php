@@ -59,7 +59,7 @@ class modPeppolpeppyrus extends DolibarrModules
 		$this->editor_url = '';
 
 		// Possible values for version are: 'development', 'experimental', 'dolibarr', 'dolibarr_deprecated' or a version string like 'x.y.z'
-		$this->version = '2.13.4';
+		$this->version = '2.15.2';
 		// File with the latest version number (VERSION in the public repository), read by checkForUpdate()
 		$this->url_last_version = 'https://raw.githubusercontent.com/cedric-marcoux/dolibarr_peppol-peppyrus/main/VERSION';
 
@@ -442,6 +442,8 @@ class modPeppolpeppyrus extends DolibarrModules
 		$result = $extrafields->addExtraField('peppol_id',  $langs->trans('PeppolSpecificID'),    		'varchar', 1101, 100, 'thirdparty', 0, 0, '', null, 1, '', 1, $langs->trans('PeppolSpecificIDTooltip'), '', '', 'peppol@peppolpeppyrus', '$conf->peppolpeppyrus->enabled');
 		$result = $extrafields->addExtraField('peppol_id',  $langs->trans('PeppolSpecificInvoiceID'),   'varchar', 1101, 100, 'facture', 0, 0, '', null, 0, '', 5, $langs->trans('PeppolSpecificInvoiceIDTooltip'), '', '', 'peppol@peppolpeppyrus', '$conf->peppolpeppyrus->enabled');
 		$result = $extrafields->addExtraField('peppol_id',  $langs->trans('PeppolSpecificInvoiceID'),   'varchar', 1101, 100, 'facture_fourn', 0, 0, '', null, 0, '', 5, $langs->trans('PeppolSpecificInvoiceIDTooltip'), '', '', 'peppol@peppolpeppyrus', '$conf->peppolpeppyrus->enabled');
+		// Since 2.15.0: per supplier whether an approval goes through Peppol after booking (empty = general setting)
+		$result = $extrafields->addExtraField('peppol_ir_approval', 'PeppolIrApproval', 'select', 1102, '', 'thirdparty', 0, 0, '', array('options' => array('aan' => 'PeppolIrApprovalAan', 'uit' => 'PeppolIrApprovalUit')), 1, '', 1, 'PeppolIrApprovalTooltip', '', '', 'peppol@peppolpeppyrus', '$conf->peppolpeppyrus->enabled');
 
 		// Permissions
 		$this->remove($options);
@@ -450,12 +452,18 @@ class modPeppolpeppyrus extends DolibarrModules
 
 		$sql[] = "UPDATE " . MAIN_DB_PREFIX . "extrafields SET label='PeppolSpecificInvoiceID',help='PeppolSpecificInvoiceIDTooltip',list=5 WHERE elementtype='facture' AND name='peppol_id'";
 
+		// Since 2.14.0: the event types in Agenda > Setup > Automatic events
+		dol_include_once('/peppolpeppyrus/lib/peppol.lib.php');
+		$langs->load('peppol@peppolpeppyrus');
+		$sql = array_merge($sql, peppolAgendaInitSql($this->db, $langs)); // @phan-suppress-current-line SqlInjection -- fixed SQL from the lib, values there with escape() and (int)
+
 		dolibarr_set_const($this->db, 'PEPPOL_MODULE_VERSION', $this->version, 'chaine', 0, 'Active module version', $conf->entity);
 		$result = $this->_init($sql, $options);
 		if ($result > 0) {
 			// The scheduled jobs get the status chosen on the setup page (deactivating removes the jobs)
 			dol_include_once('/peppolpeppyrus/lib/peppol.lib.php');
 			peppolApplyCronSettings($this->db);
+			peppolAgendaEnableDefaults($this->db);
 		}
 		return $result;
 	}
@@ -470,7 +478,9 @@ class modPeppolpeppyrus extends DolibarrModules
 	 */
 	public function remove($options = '')
 	{
-		$sql = array();
+		// Since 2.14.0: remove the event types from Agenda > Setup again (the on/off choices are kept)
+		dol_include_once('/peppolpeppyrus/lib/peppol.lib.php');
+		$sql = peppolAgendaRemoveSql();
 		return $this->_remove($sql, $options);
 	}
 

@@ -469,6 +469,32 @@ peppolStatusOpen = Te verwerken
 peppolStatusWaiting = Wachtend
 peppolSetupInboxDefault = Inkomende documenten toont standaard
 peppolSetupInboxDefaultHelp = De statusfilter als de lijst wordt geopend. "Te verwerken" is alles wat nog niet is ingeboekt of geweigerd (wachtend, geanalyseerd, fout, gedeeltelijk). Ingeboekte documenten hebben de status Gelukt, geweigerde de status Geannuleerd.
+# Agenda-gebeurtenissen, sinds 2.14.0 (Notify_<code>: Agenda > Instellingen > Automatische gebeurtenissen)
+Notify_AC_PEPPOL_SENT = Peppol: factuur verstuurd
+Notify_AC_PEPPOL_BOOKED = Peppol: inkomende factuur ingeboekt
+Notify_AC_PEPPOL_REJECTED = Peppol: inkomende factuur afgewezen
+Notify_AC_PEPPOL_ID_LINKED = Peppol: Peppol-ID gekoppeld aan een relatie
+Notify_AC_PEPPOL_IR_RE = Peppol: factuur geweigerd door de klant
+Notify_AC_PEPPOL_IR_UQ = Peppol: vraag van de klant over een factuur
+Notify_AC_PEPPOL_FAILED = Peppol: factuur niet afgeleverd
+peppolAgendaSent = Factuur %s verstuurd via Peppol
+peppolAgendaSentNote = Bericht-id: %s
+peppolAgendaSentAuto = Automatisch verstuurd (geplande taak)
+peppolAgendaSentManual = Handmatig verstuurd
+peppolAgendaBooked = Inkomende factuur %s ingeboekt (Peppol)
+peppolAgendaDocument = Peppol-document: %s
+peppolAgendaSupplierNumber = Factuurnummer van de leverancier: %s
+peppolAgendaLinkedExisting = Gekoppeld aan een inkoopfactuur die er al was
+peppolAgendaDraft = Als concept bewaard
+peppolAgendaApprovalSent = Goedkeuring (AP) naar de leverancier gestuurd
+peppolAgendaApprovalNotSent = Geen goedkeuring (AP) naar de leverancier gestuurd
+peppolAgendaRejected = Inkomende factuur %s afgewezen (Peppol)
+peppolAgendaRejectSent = Afwijzing (RE) naar de leverancier gestuurd
+peppolAgendaRejectLocal = Afwijzing alleen hier vastgelegd: de leverancier kan die niet via Peppol ontvangen
+peppolAgendaReason = Reden: %s
+peppolAgendaPeppolIdLinked = Peppol-ID gekoppeld
+peppolAgendaPeppolIdNote = Peppol-ID: %s (uit de lijst met mogelijke Peppol-ID's)
+peppolAgendaPeppolIdBulk = Peppol-ID gekoppeld bij %s relaties
 
 # Updates (#22) and disclaimer (#24), from the original module
 PeppolUpdateTab = Updates

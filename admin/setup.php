@@ -100,6 +100,11 @@ if ($action == 'update' && !empty($user->admin)) {
 		$error++;
 	}
 
+	// PEPPOL_EXCLUDE_CARE_CLAIMS (since 2.15.0): care claims and subcontracting never through Peppol, on by default
+	if (!dolibarr_set_const($db, 'PEPPOL_EXCLUDE_CARE_CLAIMS', (string) (((int) GETPOST('PEPPOL_EXCLUDE_CARE_CLAIMS', 'int')) ? 1 : 0), 'chaine', 0, '', $conf->entity)) {
+		$error++;
+	}
+
 	// PEPPOL_EMBED_PDF (since 2.11.0): embed the PDF in the Peppol file, on by default
 	if (!dolibarr_set_const($db, 'PEPPOL_EMBED_PDF', (string) (((int) GETPOST('PEPPOL_EMBED_PDF', 'int')) ? 1 : 0), 'chaine', 0, '', $conf->entity)) {
 		$error++;
@@ -156,7 +161,7 @@ if ($action == 'updateauto' && !empty($user->admin)) {
 	exit;
 }
 
-// Acceptance of the disclaimer (#24)
+// Acceptance of the disclaimer by an administrator (original module, #24)
 if ($action == 'acceptdisclaimer') {
 	if (!peppolTokenIsValid(GETPOST('token', 'alpha'), currentToken())) {
 		accessforbidden();
@@ -200,8 +205,8 @@ $acceptance = peppolDisclaimerAcceptance();
 print '<div class="' . ($acceptance ? 'info' : 'warning') . '" style="margin-bottom: 20px; padding: 15px;">';
 print '<strong>' . $langs->trans('PeppolDisclaimerTitle') . '</strong><br><br>';
 print dol_escape_htmltag($langs->transnoentitiesnoconv('PeppolDisclaimerIntro')) . '<ul>';
-foreach (array(1, 2, 3, 4) as $n) {
-	print '<li>' . dol_escape_htmltag($langs->transnoentitiesnoconv('PeppolDisclaimerItem' . $n)) . '</li>';
+foreach (array('PeppolDisclaimerItem1', 'PeppolDisclaimerItem2', 'PeppolDisclaimerItem3', 'PeppolDisclaimerItem4') as $key) {
+	print '<li>' . dol_escape_htmltag($langs->transnoentitiesnoconv($key)) . '</li>';
 }
 print '</ul>' . dol_escape_htmltag($langs->transnoentitiesnoconv('PeppolDisclaimerLiability')) . '<br>';
 print dol_escape_htmltag($langs->transnoentitiesnoconv('PeppolDisclaimerLaw'));
@@ -310,6 +315,18 @@ if ($action == 'edit') {
 	print '</thead>';
 	print '<tbody>';
 
+	// PEPPOL_EXCLUDE_CARE_CLAIMS (since 2.15.0)
+	print '<tr class="oddeven">';
+	print '<td><label for="PEPPOL_EXCLUDE_CARE_CLAIMS">' . $langs->trans("PEPPOL_EXCLUDE_CARE_CLAIMS") . '</label>';
+	print '<br><span class="opacitymedium small">' . $langs->trans("PEPPOL_EXCLUDE_CARE_CLAIMSTooltip") . '</span></td>';
+	print '<td>';
+	print '<select name="PEPPOL_EXCLUDE_CARE_CLAIMS" id="PEPPOL_EXCLUDE_CARE_CLAIMS" class="flat">';
+	print '<option value="1"' . (getDolGlobalInt('PEPPOL_EXCLUDE_CARE_CLAIMS', 1) === 1 ? ' selected' : '') . '>' . $langs->trans("Yes") . '</option>';
+	print '<option value="0"' . (getDolGlobalInt('PEPPOL_EXCLUDE_CARE_CLAIMS', 1) === 1 ? '' : ' selected') . '>' . $langs->trans("No") . '</option>';
+	print '</select>';
+	print '</td>';
+	print '</tr>';
+
 	// PEPPOL_EMBED_PDF (since 2.11.0)
 	print '<tr class="oddeven">';
 	print '<td><label for="PEPPOL_EMBED_PDF">' . $langs->trans("PEPPOL_EMBED_PDF") . '</label>';
@@ -416,6 +433,12 @@ if ($action == 'edit') {
 	print '</tr>';
 	print '</thead>';
 	print '<tbody>';
+
+	// PEPPOL_EXCLUDE_CARE_CLAIMS (since 2.15.0)
+	print '<tr class="oddeven">';
+	print '<td>' . $langs->trans("PEPPOL_EXCLUDE_CARE_CLAIMS") . '</td>';
+	print '<td>' . yn(getDolGlobalInt('PEPPOL_EXCLUDE_CARE_CLAIMS', 1)) . '</td>';
+	print '</tr>';
 
 	// PEPPOL_EMBED_PDF (since 2.11.0)
 	print '<tr class="oddeven">';

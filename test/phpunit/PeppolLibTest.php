@@ -388,4 +388,140 @@ class PeppolLibTest extends TestCase
 		$this->assertSame(array(0, 1, 3, 5), peppolInboxOpenStatuses());
 		$this->assertNotContains(2, peppolInboxOpenStatuses());
 	}
+
+	/**
+	 * Agenda event types (2.14.0): codes, on or off, SQL for disabling, note on booking
+	 *
+	 * @return void
+	 */
+	public function testAgenda()
+	{
+		global $langs;
+		$langs->load('peppol@peppolpeppyrus');
+
+		$types = peppolAgendaTypes();
+		$this->assertArrayHasKey('AC_PEPPOL_SENT', $types);
+		$this->assertArrayHasKey('AC_PEPPOL_FAILED', $types);
+		foreach (array_keys($types) as $code) {
+			$this->assertMatchesRegularExpression('/^[A-Z_]+$/', $code);
+			$this->assertNotSame('Notify_'.$code, $langs->transnoentitiesnoconv('Notify_'.$code), $code);
+		}
+
+		// Never switched on by default (module not disabled and enabled after the update): on, as before
+		$this->assertTrue(peppolAgendaTypeEnabled('AC_PEPPOL_FAILED', '', ''));
+		// Ticked
+		$this->assertTrue(peppolAgendaTypeEnabled('AC_PEPPOL_FAILED', '1', 'AC_PEPPOL_FAILED'));
+		// Deliberately unticked (Dolibarr then removes the setting)
+		$this->assertFalse(peppolAgendaTypeEnabled('AC_PEPPOL_FAILED', '', 'AC_PEPPOL_SENT,AC_PEPPOL_FAILED'));
+		$this->assertFalse(peppolAgendaTypeEnabled('AC_PEPPOL_FAILED', '0', 'AC_PEPPOL_FAILED'));
+
+		// Without the module Agenda nothing is recorded (so no database needed either)
+		$this->assertFalse(peppolAgendaEnabled('AC_PEPPOL_SENT'));
+		$this->assertSame(0, peppolAgendaEvent(null, null, 'AC_PEPPOL_SENT', 'x', 'y'));
+
+		$sql = peppolAgendaRemoveSql();
+		$this->assertCount(1, $sql);
+		$this->assertStringContainsString("'AC_PEPPOL_ID_LINKED'", $sql[0]);
+		$this->assertStringContainsString("'AC_PEPPOL_IR_RE'", $sql[0]);
+		$this->assertStringStartsWith('DELETE FROM llx_c_action_trigger WHERE code IN', $sql[0]);
+
+		$note = peppolAgendaBookedNote($langs, 'PI-0001', 'INV-001', false, true, true);
+		$this->assertStringContainsString('PI-0001', $note);
+		$this->assertStringContainsString('INV-001', $note);
+		$this->assertStringContainsString($langs->transnoentitiesnoconv('peppolAgendaDraft'), $note);
+		$this->assertStringContainsString($langs->transnoentitiesnoconv('peppolAgendaApprovalSent'), $note);
+		$note = peppolAgendaBookedNote($langs, 'PI-0002', '', true, true, false);
+		$this->assertStringContainsString($langs->transnoentitiesnoconv('peppolAgendaLinkedExisting'), $note);
+		$this->assertStringNotContainsString($langs->transnoentitiesnoconv('peppolAgendaDraft'), $note);
+		$this->assertStringContainsString($langs->transnoentitiesnoconv('peppolAgendaApprovalNotSent'), $note);
+	}
+
+	/**
+	 * Only the Peppol XML of the invoice can be sent (original module, #21)
+	 *
+	 * @return void
+	 */
+	public function testOnlyPeppolXmlOfTheInvoice()
+	{
+		global $db;
+		require_once DOL_DOCUMENT_ROOT.'/compta/facture/class/facture.class.php';
+		$inv = new Facture($db);
+		$inv->last_main_doc = 'facture/FA0001/FA0001.pdf';
+		foreach (array('other-document.xml', 'FA0001.xml', 'FA0001_peppol.pdf', 'FA0001_peppol.xml.txt') as $file) {
+			$_GET['selectFilename'] = $file;
+			$this->assertSame(-1, peppolFindFileToUse($inv, ''), $file);
+		}
+		$_GET['selectFilename'] = 'FA0001_peppol.xml';
+		$this->assertSame('FA0001_peppol.xml', peppolFindFileToUse($inv, ''));
+		unset($_GET['selectFilename']);
+	}
+
+	/**
+	 * Since 2.15.0: care claims (ZVW, WLZ) and subcontracting invoices never go through Peppol
+	 *
+	 * @return void
+	 */
+	public function testCareClaim()
+	{
+		$this->assertTrue(peppolIsCareClaim('onszorg_zvw', array()));
+		$this->assertTrue(peppolIsCareClaim('onszorg_oa', array()));
+		$this->assertTrue(peppolIsCareClaim('crabe', array('WMO', 'wlz')));
+		$this->assertTrue(peppolIsCareClaim('', array(' ZVW ')));
+		$this->assertFalse(peppolIsCareClaim('crabe', array('WMO', 'PGB')));
+		$this->assertFalse(peppolIsCareClaim('onszorg_wmo', array()));
+	}
+
+	/**
+	 * Since 2.15.0: the choice on the third party wins over the general setting for the approval
+	 *
+	 * @return void
+	 */
+	public function testSendApprovalFor()
+	{
+		$this->assertFalse(peppolSendApprovalFor(false, ''));
+		$this->assertTrue(peppolSendApprovalFor(true, ''));
+		$this->assertTrue(peppolSendApprovalFor(false, 'aan'));
+		$this->assertFalse(peppolSendApprovalFor(true, 'uit'));
+		$this->assertTrue(peppolSendApprovalFor(true, 'other'));
+	}
+
+	/**
+	 * Since 2.15.0: the disclaimer, accepted by an administrator only, per entity
+	 *
+	 * @return void
+	 */
+	public function testDisclaimerAcceptance()
+	{
+		global $db, $conf;
+		require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
+		require_once DOL_DOCUMENT_ROOT.'/core/lib/files.lib.php';
+		if (!defined('PEPPOL_DISCLAIMER_DIR')) {
+			define('PEPPOL_DISCLAIMER_DIR', sys_get_temp_dir().'/peppoltest-disclaimer-'.getmypid());
+		}
+		dol_delete_dir_recursive(PEPPOL_DISCLAIMER_DIR);
+		$this->assertNull(peppolDisclaimerAcceptance());
+
+		$plain = new User($db);
+		$plain->id = 7;
+		$plain->login = 'test';
+		$plain->admin = 0;
+		$this->assertFalse(peppolDisclaimerAccept($db, $plain));
+
+		$admin = new User($db);
+		$admin->id = 8;
+		$admin->login = 'admin';
+		$admin->admin = 1;
+		$this->assertTrue(peppolDisclaimerAccept($db, $admin));
+		$accepted = peppolDisclaimerAcceptance();
+		$this->assertNotNull($accepted);
+		$this->assertSame(8, $accepted['user_id']);
+
+		$entity = $conf->entity;
+		$conf->entity = 987654;
+		$this->assertNull(peppolDisclaimerAcceptance());
+		$conf->entity = $entity;
+
+		dol_delete_dir_recursive(PEPPOL_DISCLAIMER_DIR);
+		$this->assertNull(peppolDisclaimerAcceptance());
+	}
 }

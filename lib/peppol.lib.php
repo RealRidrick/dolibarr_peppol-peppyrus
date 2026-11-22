@@ -417,133 +417,11 @@ function peppolAdminPrepareHead()
 	return $head;
 }
 
-/**
- * May this user send customer invoices through Peppol?
- *
- * Module "write" right, or the rights Dolibarr asks for sending an invoice by e-mail
- * (create invoices, or the advanced "send" right).
- *
- * @param   User  $user  User
- * @return  bool
+/*
+ * Disclaimer of the original module (Cedric Marcoux, #24 and #25), since 2.15.0: nothing is sent through Peppol
+ * before an administrator accepted it. The acceptance is stored per entity in a private folder of the data
+ * directory, not in the Dolibarr constants.
  */
-function peppolUserCanSend($user)
-{
-	if (!is_object($user)) {
-		return false;
-	}
-	return !empty($user->admin)
-		|| !empty($user->rights->peppolpeppyrus->write)
-		|| !empty($user->rights->facture->creer)
-		|| !empty($user->rights->facture->invoice_advance->send);
-}
-
-/**
- * Checks done before sending a document to the access point (confirm_peppolSendFile).
- *
- * @param   User          $user     User
- * @param   CommonObject  $invoice  Customer invoice
- * @param   string        $confirm  Answer of the confirmation dialog
- * @return  string                  '' when the document may be sent, otherwise the translation key of the reason
- */
-function peppolSendRefusalReason($user, $invoice, $confirm)
-{
-	if ($confirm !== 'yes') {
-		return 'PeppolSendNotConfirmed';
-	}
-	if (!is_object($invoice) || !isset($invoice->element) || $invoice->element !== 'facture') {
-		return 'ErrorBadParameters';
-	}
-	if (!peppolUserCanSend($user)) {
-		return 'NotEnoughPermissions';
-	}
-	if (!peppolDisclaimerAcceptance()) {
-		return 'PeppolDisclaimerNotAccepted';
-	}
-	if (!peppolIsInvoiceStatusEligible($invoice)) {
-		return 'PeppolErrorStatusNotEligible';
-	}
-	return '';
-}
-
-/**
- * Authentication of a webhook request.
- *
- * @param   string  $secretKey     Configured secret (PEPPOL_AP_WEBHOOK_KEY); empty = webhook disabled
- * @param   string  $rawPayload    Raw request body
- * @param   string  $hmacReceived  Signature received with the request (hex HMAC-SHA256 of the body)
- * @return  string                 '' when the request is authentic, otherwise the reason (never contains a secret)
- */
-function peppolWebhookAuthRefusal($secretKey, $rawPayload, $hmacReceived)
-{
-	if ((string) $secretKey === '') {
-		return 'webhook disabled (no secret key configured)';
-	}
-	if ((string) $hmacReceived === '') {
-		return 'no signature';
-	}
-	if (!hash_equals(hash_hmac('sha256', (string) $rawPayload, (string) $secretKey), strtolower(trim((string) $hmacReceived)))) {
-		return 'invalid signature';
-	}
-	return '';
-}
-
-/**
- * May this user open the incoming Peppol documents (module right "Import Peppol invoices")?
- *
- * @param   User  $user  User
- * @return  bool
- */
-function peppolUserCanImport($user)
-{
-	return is_object($user) && empty($user->socid) && (!empty($user->admin) || !empty($user->rights->peppolpeppyrus->import));
-}
-
-/**
- * Checks before storing a Peppol ID on a third party from the search page.
- *
- * @param   User    $user           User
- * @param   string  $tokenGiven     Token received with the request
- * @param   string  $tokenExpected  Token of the session (currentToken())
- * @return  string                  '' when allowed, otherwise the translation key of the reason
- */
-function peppolSetThirdpartyIdRefusalReason($user, $tokenGiven, $tokenExpected)
-{
-	if (!peppolTokenIsValid($tokenGiven, $tokenExpected)) {
-		return 'ErrorBadValueForParameter';
-	}
-	if (!is_object($user) || (empty($user->admin) && empty($user->rights->societe->creer))) {
-		return 'NotEnoughPermissions';
-	}
-	return '';
-}
-
-/**
- * Peppol ID stored on a third party, from a directory search result.
- *
- * @param   string  $peppolScheme   Scheme of the directory, e.g. "iso6523-actorid-upis::0208"
- * @param   string  $participantId  Participant identifier, e.g. "0000000097"
- * @return  string                  "schemeCode:participantId" (e.g. "0208:0000000097"), or the participant id alone when the scheme is unknown
- */
-function peppolBuildThirdpartyPeppolId($peppolScheme, $participantId)
-{
-	$participantId = trim((string) $participantId);
-	if (preg_match('/::(\d+)$/', (string) $peppolScheme, $m) && $participantId !== '') {
-		return $m[1] . ':' . $participantId;
-	}
-	return $participantId;
-}
-
-/**
- * CSRF token check for actions the module handles itself.
- *
- * @param   string  $tokenGiven     Token received with the request
- * @param   string  $tokenExpected  Token of the session (currentToken())
- * @return  bool
- */
-function peppolTokenIsValid($tokenGiven, $tokenExpected)
-{
-	return (string) $tokenGiven !== '' && (string) $tokenExpected !== '' && hash_equals((string) $tokenExpected, (string) $tokenGiven);
-}
 
 /**
  * Version of the disclaimer text: increase it when the text changes, a new acceptance is then required.
@@ -676,6 +554,208 @@ function peppolDisclaimerAccept($db, $user)
 	}
 	dol_syslog('peppolpeppyrus disclaimer version ' . PEPPOL_DISCLAIMER_VERSION . ' accepted by user ' . ((int) $user->id) . ' in entity ' . ((int) $conf->entity) . ($ok ? '' : ' (not saved)'), LOG_NOTICE);
 	return $ok;
+}
+
+/**
+ * Invoice that never goes through Peppol (since 2.15.0, setting PEPPOL_EXCLUDE_CARE_CLAIMS, on by default):
+ * - invoice template onszorg_zvw of the module Ons-facturatie: a care claim (ZVW, WLZ), sent through Vecozo;
+ * - invoice template onszorg_oa: subcontracting;
+ * - a line with a service of the funding stream ZVW or WLZ (module Ons-facturatie).
+ * Such invoices contain health data and have their own channel.
+ *
+ * @param string   $model  model_pdf of the invoice
+ * @param string[] $flows  Funding streams of the lines (ZVW, WLZ, WMO, ...)
+ * @return bool
+ */
+function peppolIsCareClaim($model, $flows)
+{
+	if (in_array((string) $model, array('onszorg_zvw', 'onszorg_oa'), true)) {
+		return true;
+	}
+	foreach ($flows as $flow) {
+		if (in_array(strtoupper(trim((string) $flow)), array('ZVW', 'WLZ'), true)) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
+ * Is this invoice excluded from Peppol (since 2.15.0)? Reads the funding streams of the lines from the services of
+ * the module Ons-facturatie when it is enabled; no hard dependency.
+ *
+ * @param DoliDB   $db      Database
+ * @param \Facture $facture Invoice
+ * @return bool
+ */
+function peppolInvoiceIsExcluded($db, $facture)
+{
+	global $conf;
+	if (!getDolGlobalInt('PEPPOL_EXCLUDE_CARE_CLAIMS', 1)) {
+		return false;
+	}
+	$flows = array();
+	if (isModEnabled('onsfacturatie') && (int) $facture->id > 0) {
+		$sql = "SELECT DISTINCT p.stroom FROM " . MAIN_DB_PREFIX . "facturedet AS d";
+		$sql .= " INNER JOIN " . MAIN_DB_PREFIX . "onsfacturatie_prestatie AS p ON p.fk_product = d.fk_product AND p.entity = " . ((int) $conf->entity);
+		$sql .= " WHERE d.fk_facture = " . ((int) $facture->id) . " AND d.fk_product > 0";
+		$resql = $db->query($sql);
+		if ($resql) {
+			while ($obj = $db->fetch_object($resql)) {
+				$flows[] = (string) $obj->stroom;
+			}
+			$db->free($resql);
+		}
+	}
+	return peppolIsCareClaim((string) $facture->model_pdf, $flows);
+}
+
+/**
+ * Send an approval (Invoice Response AP) to the supplier on booking (since 2.15.0, per supplier): the choice on the
+ * third party (extra field peppol_ir_approval) wins over the setting PEPPOL_IR_SEND_APPROVAL; empty follows it.
+ *
+ * @param bool   $general Setting PEPPOL_IR_SEND_APPROVAL
+ * @param string $choice  Choice on the third party: 'aan' (always), 'uit' (never) or empty
+ * @return bool
+ */
+function peppolSendApprovalFor($general, $choice)
+{
+	$choice = strtolower(trim((string) $choice));
+	if ($choice === 'aan') {
+		return true;
+	}
+	if ($choice === 'uit') {
+		return false;
+	}
+	return (bool) $general;
+}
+
+/**
+ * May this user send customer invoices through Peppol?
+ *
+ * Module "write" right, or the rights Dolibarr asks for sending an invoice by e-mail
+ * (create invoices, or the advanced "send" right).
+ *
+ * @param   User  $user  User
+ * @return  bool
+ */
+function peppolUserCanSend($user)
+{
+	if (!is_object($user)) {
+		return false;
+	}
+	return !empty($user->admin)
+		|| !empty($user->rights->peppolpeppyrus->write)
+		|| !empty($user->rights->facture->creer)
+		|| !empty($user->rights->facture->invoice_advance->send);
+}
+
+/**
+ * Checks done before sending a document to the access point (confirm_peppolSendFile).
+ *
+ * @param   User          $user     User
+ * @param   CommonObject  $invoice  Customer invoice
+ * @param   string        $confirm  Answer of the confirmation dialog
+ * @return  string                  '' when the document may be sent, otherwise the translation key of the reason
+ */
+function peppolSendRefusalReason($user, $invoice, $confirm)
+{
+	if ($confirm !== 'yes') {
+		return 'PeppolSendNotConfirmed';
+	}
+	if (!is_object($invoice) || !isset($invoice->element) || $invoice->element !== 'facture') {
+		return 'ErrorBadParameters';
+	}
+	if (!peppolUserCanSend($user)) {
+		return 'NotEnoughPermissions';
+	}
+	if (!peppolDisclaimerAcceptance()) {
+		return 'PeppolDisclaimerNotAccepted';
+	}
+	if (!peppolIsInvoiceStatusEligible($invoice)) {
+		return 'PeppolErrorStatusNotEligible';
+	}
+	return '';
+}
+
+/**
+ * Authentication of a webhook request.
+ *
+ * @param   string  $secretKey     Configured secret (PEPPOL_AP_WEBHOOK_KEY); empty = webhook disabled
+ * @param   string  $rawPayload    Raw request body
+ * @param   string  $hmacReceived  Signature received with the request (hex HMAC-SHA256 of the body)
+ * @return  string                 '' when the request is authentic, otherwise the reason (never contains a secret)
+ */
+function peppolWebhookAuthRefusal($secretKey, $rawPayload, $hmacReceived)
+{
+	if ((string) $secretKey === '') {
+		return 'webhook disabled (no secret key configured)';
+	}
+	if ((string) $hmacReceived === '') {
+		return 'no signature';
+	}
+	if (!hash_equals(hash_hmac('sha256', (string) $rawPayload, (string) $secretKey), strtolower(trim((string) $hmacReceived)))) {
+		return 'invalid signature';
+	}
+	return '';
+}
+
+/**
+ * May this user open the incoming Peppol documents (module right "Import Peppol invoices")?
+ *
+ * @param   User  $user  User
+ * @return  bool
+ */
+function peppolUserCanImport($user)
+{
+	return is_object($user) && empty($user->socid) && (!empty($user->admin) || !empty($user->rights->peppolpeppyrus->import));
+}
+
+/**
+ * Checks before storing a Peppol ID on a third party from the search page.
+ *
+ * @param   User    $user           User
+ * @param   string  $tokenGiven     Token received with the request
+ * @param   string  $tokenExpected  Token of the session (currentToken())
+ * @return  string                  '' when allowed, otherwise the translation key of the reason
+ */
+function peppolSetThirdpartyIdRefusalReason($user, $tokenGiven, $tokenExpected)
+{
+	if (!peppolTokenIsValid($tokenGiven, $tokenExpected)) {
+		return 'ErrorBadValueForParameter';
+	}
+	if (!is_object($user) || (empty($user->admin) && empty($user->rights->societe->creer))) {
+		return 'NotEnoughPermissions';
+	}
+	return '';
+}
+
+/**
+ * Peppol ID stored on a third party, from a directory search result.
+ *
+ * @param   string  $peppolScheme   Scheme of the directory, e.g. "iso6523-actorid-upis::0208"
+ * @param   string  $participantId  Participant identifier, e.g. "0000000097"
+ * @return  string                  "schemeCode:participantId" (e.g. "0208:0000000097"), or the participant id alone when the scheme is unknown
+ */
+function peppolBuildThirdpartyPeppolId($peppolScheme, $participantId)
+{
+	$participantId = trim((string) $participantId);
+	if (preg_match('/::(\d+)$/', (string) $peppolScheme, $m) && $participantId !== '') {
+		return $m[1] . ':' . $participantId;
+	}
+	return $participantId;
+}
+
+/**
+ * CSRF token check for actions the module handles itself.
+ *
+ * @param   string  $tokenGiven     Token received with the request
+ * @param   string  $tokenExpected  Token of the session (currentToken())
+ * @return  bool
+ */
+function peppolTokenIsValid($tokenGiven, $tokenExpected)
+{
+	return (string) $tokenGiven !== '' && (string) $tokenExpected !== '' && hash_equals((string) $tokenExpected, (string) $tokenGiven);
 }
 
 /**
@@ -843,7 +923,7 @@ function peppolFindFileToUse(CommonObject $obj, $defaultPath)
 		}
 	}
 
-	// Only the Peppol XML generated by the module can be sent (#21)
+	// Only the Peppol XML generated by the module can be sent (original module, #21)
 	$ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
 	if ($ext != "xml" || !preg_match('/_peppol\.xml$/i', (string) $filename)) {
 		dol_syslog("peppolFindFileToUse fix race condition, ext was=" . $ext);
@@ -1606,4 +1686,186 @@ function peppolInboxDefaultStatus($value = null)
 		return 'open';
 	}
 	return $value === 'all' ? '' : $value;
+}
+
+/**
+ * Event types of this module in Agenda > Setup > Automatic events (since 2.14.0). The three older types
+ * (AC_PEPPOL_IR_RE, AC_PEPPOL_IR_UQ, AC_PEPPOL_FAILED) are in it too, so they can be switched on and off; they stay
+ * on by default.
+ *
+ * @return array<string,int>	Code => position (rang) in the list
+ */
+function peppolAgendaTypes()
+{
+	// The language keys Notify_<code> (admin/agenda.php reads them itself):
+	// Notify_AC_PEPPOL_SENT, Notify_AC_PEPPOL_BOOKED, Notify_AC_PEPPOL_REJECTED, Notify_AC_PEPPOL_ID_LINKED,
+	// Notify_AC_PEPPOL_IR_RE, Notify_AC_PEPPOL_IR_UQ, Notify_AC_PEPPOL_FAILED
+	return array(
+		'AC_PEPPOL_SENT' => 950,
+		'AC_PEPPOL_FAILED' => 951,
+		'AC_PEPPOL_IR_RE' => 952,
+		'AC_PEPPOL_IR_UQ' => 953,
+		'AC_PEPPOL_BOOKED' => 954,
+		'AC_PEPPOL_REJECTED' => 955,
+		'AC_PEPPOL_ID_LINKED' => 956,
+	);
+}
+
+/**
+ * SQL for enabling the module: the event types (again) in llx_c_action_trigger. Repeatable: first removed by code,
+ * then inserted. Works on MySQL, MariaDB and PostgreSQL.
+ *
+ * @param	DoliDB		$db		Database
+ * @param	Translate	$langs	Language of the description (admin/agenda.php translates Notify_<code> itself)
+ * @return	string[]
+ */
+function peppolAgendaInitSql($db, $langs)
+{
+	$sql = peppolAgendaRemoveSql();
+	foreach (peppolAgendaTypes() as $code => $rang) {
+		$key = 'Notify_' . $code;
+		$label = dol_trunc($langs->transnoentitiesnoconv($key), 120, 'right', 'UTF-8', 1);
+		$sql[] = "INSERT INTO " . MAIN_DB_PREFIX . "c_action_trigger (elementtype, code, label, description, rang) VALUES ('peppolpeppyrus', '"
+			. $db->escape($code) . "', '" . $db->escape($label) . "', '" . $db->escape($label) . "', " . ((int) $rang) . ")";
+	}
+	return $sql;
+}
+
+/**
+ * SQL for disabling the module: the event types removed from llx_c_action_trigger again. The settings
+ * (MAIN_AGENDA_ACTIONAUTO_<code>) stay, so a deliberate choice is not lost.
+ *
+ * @return	string[]
+ */
+function peppolAgendaRemoveSql()
+{
+	return array("DELETE FROM " . MAIN_DB_PREFIX . "c_action_trigger WHERE code IN ('" . implode("','", array_keys(peppolAgendaTypes())) . "')");
+}
+
+/**
+ * Switches every event type on by default once, when the module is enabled. Dolibarr removes the setting
+ * MAIN_AGENDA_ACTIONAUTO_<code> when the type is unticked in Agenda > Setup; that is why PEPPOL_AGENDA_DEFAULTS_DONE
+ * remembers which types were switched on before, so disabling and enabling the module does not undo a deliberate
+ * choice to switch a type off.
+ *
+ * @param	DoliDB	$db		Database
+ * @return	void
+ */
+function peppolAgendaEnableDefaults($db)
+{
+	global $conf;
+
+	require_once DOL_DOCUMENT_ROOT . '/core/lib/admin.lib.php';
+	$done = array_values(array_filter(explode(',', getDolGlobalString('PEPPOL_AGENDA_DEFAULTS_DONE'))));
+	foreach (array_keys(peppolAgendaTypes()) as $code) {
+		if (in_array($code, $done, true)) {
+			continue;
+		}
+		if (getDolGlobalString('MAIN_AGENDA_ACTIONAUTO_' . $code) === '') {
+			dolibarr_set_const($db, 'MAIN_AGENDA_ACTIONAUTO_' . $code, '1', 'chaine', 0, '', $conf->entity);
+		}
+		$done[] = $code;
+	}
+	dolibarr_set_const($db, 'PEPPOL_AGENDA_DEFAULTS_DONE', implode(',', $done), 'chaine', 0, '', $conf->entity);
+}
+
+/**
+ * Whether an event type is on: ticked in Agenda > Setup, or never switched on by default yet (the module was not
+ * disabled and enabled after the update). So the older types keep working as before.
+ *
+ * @param	string	$code		Code of the type
+ * @param	string	$value		Value of MAIN_AGENDA_ACTIONAUTO_<code>
+ * @param	string	$done		Value of PEPPOL_AGENDA_DEFAULTS_DONE (codes, separated by commas)
+ * @return	bool
+ */
+function peppolAgendaTypeEnabled($code, $value, $done)
+{
+	if ((int) $value > 0) {
+		return true;
+	}
+	return !in_array($code, array_filter(explode(',', $done)), true);
+}
+
+/**
+ * Whether an event of this type must be recorded now: the module Agenda is enabled and the type is on
+ *
+ * @param	string	$code	Code of the type
+ * @return	bool
+ */
+function peppolAgendaEnabled($code)
+{
+	return isModEnabled('agenda') && peppolAgendaTypeEnabled($code, getDolGlobalString('MAIN_AGENDA_ACTIONAUTO_' . $code), getDolGlobalString('PEPPOL_AGENDA_DEFAULTS_DONE'));
+}
+
+/**
+ * Records an event in the agenda of Dolibarr (since 2.14.0), after a successful action. Directly as an ActionComm,
+ * not through a trigger, so there is no duplicate. When it fails, only a warning in the log: the action itself
+ * goes on.
+ *
+ * @param	DoliDB	$db				Database
+ * @param	User	$user			Who did it (for a scheduled job: the user of the job)
+ * @param	string	$code			Code of the type (peppolAgendaTypes())
+ * @param	string	$label			Short title
+ * @param	string	$note			Note (references, no personal data)
+ * @param	int		$socid			Third party, or 0
+ * @param	int		$fkelement		Linked object, or 0
+ * @param	string	$elementtype	Type of the linked object ('invoice', 'invoice_supplier'), or ''
+ * @return	int		1 recorded, 0 not needed (agenda or type off), -1 error
+ */
+function peppolAgendaEvent($db, $user, $code, $label, $note, $socid = 0, $fkelement = 0, $elementtype = '')
+{
+	if (!peppolAgendaEnabled($code)) {
+		return 0;
+	}
+	try {
+		require_once DOL_DOCUMENT_ROOT . '/comm/action/class/actioncomm.class.php';
+		$ac = new ActionComm($db);
+		$ac->type_code = 'AC_OTH_AUTO';
+		$ac->code = $code;
+		$ac->label = dol_trunc($label, 120, 'right', 'UTF-8', 1);
+		$ac->note_private = $note;
+		$ac->datep = dol_now();
+		$ac->datef = $ac->datep;
+		$ac->percentage = -1;
+		$ac->userownerid = is_object($user) ? (int) $user->id : 0;
+		$ac->socid = max(0, (int) $socid);
+		if ((int) $fkelement > 0 && $elementtype !== '') {
+			$ac->fk_element = (int) $fkelement;
+			$ac->elementtype = $elementtype;
+		}
+		if ($ac->create($user) <= 0) {
+			dol_syslog('peppolAgendaEvent ' . $code . ' not recorded: ' . $ac->error . ' ' . implode(', ', $ac->errors), LOG_WARNING);
+			return -1;
+		}
+	} catch (Throwable $e) {
+		dol_syslog('peppolAgendaEvent ' . $code . ' not recorded: ' . $e->getMessage(), LOG_WARNING);
+		return -1;
+	}
+	return 1;
+}
+
+/**
+ * Note of an incoming invoice that was booked (since 2.14.0)
+ *
+ * @param	Translate	$langs		Language
+ * @param	string		$docref		Reference of the Peppol document
+ * @param	string		$number		Invoice number of the supplier
+ * @param	bool		$existing	Linked to a supplier invoice that already existed
+ * @param	bool		$draft		Not validated (draft)
+ * @param	bool		$approval	Approval (AP) sent to the supplier
+ * @return	string
+ */
+function peppolAgendaBookedNote($langs, $docref, $number, $existing, $draft, $approval)
+{
+	$lines = array($langs->transnoentitiesnoconv('peppolAgendaDocument', $docref));
+	if ($number !== '') {
+		$lines[] = $langs->transnoentitiesnoconv('peppolAgendaSupplierNumber', $number);
+	}
+	if ($existing) {
+		$lines[] = $langs->transnoentitiesnoconv('peppolAgendaLinkedExisting');
+	} elseif ($draft) {
+		$lines[] = $langs->transnoentitiesnoconv('peppolAgendaDraft');
+	}
+	$lines[] = $langs->transnoentitiesnoconv($approval ? 'peppolAgendaApprovalSent' : 'peppolAgendaApprovalNotSent');
+	return implode("\n", $lines);
 }
