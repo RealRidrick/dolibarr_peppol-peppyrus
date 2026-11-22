@@ -443,9 +443,9 @@ class PeppolLibTest extends TestCase
 	 */
 	public function testOnlyPeppolXmlOfTheInvoice()
 	{
-		global $db;
 		require_once DOL_DOCUMENT_ROOT.'/compta/facture/class/facture.class.php';
-		$inv = new Facture($db);
+		// No database in the unit tests; Dolibarr 18 requires a DoliDB in the constructor (since 2.16.0 a stand-in)
+		$inv = new Facture($this->database());
 		$inv->last_main_doc = 'facture/FA0001/FA0001.pdf';
 		foreach (array('other-document.xml', 'FA0001.xml', 'FA0001_peppol.pdf', 'FA0001_peppol.xml.txt') as $file) {
 			$_GET['selectFilename'] = $file;
@@ -457,27 +457,19 @@ class PeppolLibTest extends TestCase
 	}
 
 	/**
-	 * Since 2.15.0: care claims (ZVW, WLZ) and subcontracting invoices never go through Peppol
+	 * Since 2.16.0: invoices that never go through Peppol, by PDF template or product category (general settings)
 	 *
 	 * @return void
 	 */
-	public function testCareClaim()
+	public function testExclusion()
 	{
-		$this->assertTrue(peppolIsCareClaim('onszorg_zvw', array()));
-		$this->assertTrue(peppolIsCareClaim('onszorg_oa', array()));
-		$this->assertTrue(peppolIsCareClaim('crabe', array('WMO', 'wlz')));
-		$this->assertTrue(peppolIsCareClaim('', array(' ZVW ')));
-		$this->assertFalse(peppolIsCareClaim('crabe', array('WMO', 'PGB')));
-		$this->assertFalse(peppolIsCareClaim('onszorg_wmo', array()));
-		// Since 2.16.0: three separate settings
-		$this->assertSame('care', peppolExclusionReason('onszorg_zvw', array(), true, false, array()));
-		$this->assertSame('', peppolExclusionReason('onszorg_zvw', array(), false, true, array()));
-		$this->assertSame('sub', peppolExclusionReason('onszorg_oa', array(), false, true, array()));
-		$this->assertSame('', peppolExclusionReason('onszorg_oa', array(), true, false, array()));
-		$this->assertSame('care', peppolExclusionReason('crabe', array('wlz'), true, false, array()));
-		$this->assertSame('model', peppolExclusionReason('sponge', array(), false, false, array('crabe', 'sponge')));
-		$this->assertSame('', peppolExclusionReason('crabe', array('WMO'), true, true, array()));
+		$this->assertSame('model', peppolExclusionReason('sponge', false, array('crabe', 'sponge')));
+		$this->assertSame('', peppolExclusionReason('sponge', false, array('crabe')));
+		$this->assertSame('', peppolExclusionReason('', false, array('')));
+		$this->assertSame('category', peppolExclusionReason('crabe', true, array()));
+		$this->assertSame('model', peppolExclusionReason('crabe', true, array('crabe')));
 		$this->assertSame(array('crabe', 'sponge'), peppolExcludedModels(' crabe, sponge,crabe,,bad name;x '));
+		$this->assertSame(array(), peppolExcludedModels(''));
 	}
 
 	/**
@@ -501,6 +493,11 @@ class PeppolLibTest extends TestCase
 	 */
 	public function testDisclaimerAcceptance()
 	{
+		// dol_delete_dir_recursive() needs the hook manager on Dolibarr 18; the unit tests have none (since 2.16.0)
+		if (!is_object($GLOBALS['hookmanager'] ?? null) && $this->database() !== null) {
+			require_once DOL_DOCUMENT_ROOT.'/core/class/hookmanager.class.php';
+			$GLOBALS['hookmanager'] = new HookManager($this->database());
+		}
 		global $db, $conf;
 		require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
 		require_once DOL_DOCUMENT_ROOT.'/core/lib/files.lib.php';
@@ -532,5 +529,26 @@ class PeppolLibTest extends TestCase
 
 		dol_delete_dir_recursive(PEPPOL_DISCLAIMER_DIR);
 		$this->assertNull(peppolDisclaimerAcceptance());
+	}
+
+	/**
+	 * The database of the test run. Without one: null where the constructors of Dolibarr accept that (19 and newer;
+	 * PHP refuses a mock of DoliDB there), a stand-in where they require a DoliDB (Dolibarr 18) (since 2.16.0)
+	 *
+	 * @return ?DoliDB
+	 */
+	private function database()
+	{
+		global $db;
+		if ($db instanceof DoliDB) {
+			return $db;
+		}
+		require_once DOL_DOCUMENT_ROOT.'/compta/facture/class/facture.class.php';
+		$parameter = (new ReflectionMethod('Facture', '__construct'))->getParameters()[0];
+		if (!$parameter->hasType() || $parameter->allowsNull()) {
+			return null;
+		}
+		require_once DOL_DOCUMENT_ROOT.'/core/db/DoliDB.class.php';
+		return $this->createMock(DoliDB::class);
 	}
 }

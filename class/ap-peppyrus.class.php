@@ -358,13 +358,12 @@ class Peppyrus extends PeppolAP
 
 		$ret = 0;
 
-		// Since 2.15.0: a care claim (ZVW, WLZ) or subcontracting invoice never goes through Peppol, not by hand either
+		// Since 2.15.0: an excluded invoice (settings, since 2.16.0 general) never goes through Peppol, not by hand either
 		$exclusion = $object instanceof \Facture ? peppolInvoiceExclusion($this->db, $object) : '';
 		if ($exclusion !== '') {
 			// Since 2.16.0 the message says which setting excludes the invoice
 			$langs->load('peppol@peppolpeppyrus');
-			$messages = array('care' => 'PeppolCareClaimNever', 'sub' => 'PeppolSubcontractingNever', 'model' => 'PeppolModelNever');
-			setEventMessage($langs->trans($messages[$exclusion] ?? 'PeppolCareClaimNever'), 'errors');
+			setEventMessage($langs->trans($exclusion === 'category' ? 'PeppolCategoryNever' : 'PeppolModelNever'), 'errors');
 			return -11;
 		}
 

@@ -199,7 +199,7 @@ class PeppolAutoSend
 		if ($inv->fetch($id) <= 0) {
 			return -1;
 		}
-		// Since 2.15.0: a care claim (ZVW, WLZ) or subcontracting invoice never goes through Peppol; skipped without error
+		// Since 2.15.0: an excluded invoice (settings, since 2.16.0 general) never goes through Peppol; skipped without error
 		if (peppolInvoiceIsExcluded($this->db, $inv)) {
 			return 0;
 		}

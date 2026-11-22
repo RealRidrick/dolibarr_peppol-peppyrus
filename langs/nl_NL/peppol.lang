@@ -590,18 +590,16 @@ PeppolDisclaimerMustTick = Vink het vakje aan om de disclaimer te aanvaarden
 PeppolDisclaimerNotAcceptedNotice = Verzenden via Peppol is uitgeschakeld tot een beheerder de disclaimer van de Peppol-module aanvaardt.
 PeppolDisclaimerGoToSetup = De instellingen van de Peppol-module openen
 
-# Sinds 2.15.0: zorgdeclaraties nooit via Peppol (module Ons-facturatie)
-PEPPOL_EXCLUDE_CARE_CLAIMS = Zorgdeclaraties nooit via Peppol versturen
-PEPPOL_EXCLUDE_CARE_CLAIMSTooltip = Voor Nederlandse thuiszorg met de module Ons-facturatie: facturen met het sjabloon onszorg_zvw, of met een prestatie uit de stroom ZVW of WLZ, krijgen geen Peppol-bestand en worden nooit verstuurd. Ze bevatten gezondheidsgegevens en gaan via Vecozo. Standaard: aan als Ons-facturatie aanstaat, anders uit.
-PeppolCareClaimNever = Dit is een zorgdeclaratie (ZVW of WLZ, via Vecozo). Volgens de instelling gaat die niet via Peppol.
 # Sinds 2.15.0: goedkeuring per leverancier
 PeppolIrApproval = Goedkeuring via Peppol
 PeppolIrApprovalAan = Altijd sturen
 PeppolIrApprovalUit = Nooit sturen
 PeppolIrApprovalTooltip = Na het inboeken van een inkomende factuur een goedkeuring (Invoice Response) via Peppol naar deze leverancier sturen. Leeg volgt de instelling van de Peppol-module. Alleen als de leverancier zo'n bericht kan ontvangen.
-PEPPOL_EXCLUDE_SUBCONTRACTING = Facturen voor onderaanneming nooit via Peppol versturen
-PEPPOL_EXCLUDE_SUBCONTRACTINGTooltip = Facturen met het sjabloon onszorg_oa (onderaanneming, module Ons-facturatie) krijgen geen Peppol-bestand en worden nooit verstuurd. Standaard: zoals de instelling voor zorgdeclaraties.
+
+# Sinds 2.16.0: facturen die nooit via Peppol gaan
 PEPPOL_EXCLUDE_MODELS = Facturen met deze PDF-sjablonen nooit via Peppol versturen
-PEPPOL_EXCLUDE_MODELSTooltip = Namen van PDF-sjablonen van facturen, gescheiden door komma's (bijvoorbeeld crabe,sponge). Voor elk land en elk gebruik: een factuur met een van deze sjablonen krijgt geen Peppol-bestand en wordt nooit verstuurd. Leeg: geen.
-PeppolSubcontractingNever = Dit is een factuur voor onderaanneming. Volgens de instelling gaat die niet via Peppol.
+PEPPOL_EXCLUDE_MODELSTooltip = Namen van PDF-sjablonen van facturen, gescheiden door komma's (bijvoorbeeld crabe,sponge). Een factuur met een van deze sjablonen krijgt geen Peppol-bestand en wordt nooit verstuurd, ook niet met de hand. Leeg: geen.
+PEPPOL_EXCLUDE_CATEGORY = Facturen met een product of dienst uit deze categorie nooit via Peppol versturen
+PEPPOL_EXCLUDE_CATEGORYTooltip = Categorie van producten en diensten. Een factuur met minstens één regel met een product of dienst uit deze categorie krijgt geen Peppol-bestand en wordt nooit verstuurd, ook niet met de hand. Bijvoorbeeld facturen met gezondheidsgegevens die via een eigen kanaal gaan. Leeg: geen.
 PeppolModelNever = Het PDF-sjabloon van deze factuur staat in de lijst van sjablonen die nooit via Peppol gaan (instellingen van de module).
+PeppolCategoryNever = Deze factuur heeft een product of dienst uit de categorie die nooit via Peppol gaat (instellingen van de module).

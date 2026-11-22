@@ -100,17 +100,18 @@ if ($action == 'update' && !empty($user->admin)) {
 		$error++;
 	}
 
-	// PEPPOL_EXCLUDE_CARE_CLAIMS (since 2.15.0), PEPPOL_EXCLUDE_SUBCONTRACTING and PEPPOL_EXCLUDE_MODELS (since 2.16.0):
-	// invoices that never go through Peppol, each on its own
-	if (!dolibarr_set_const($db, 'PEPPOL_EXCLUDE_CARE_CLAIMS', (string) (((int) GETPOST('PEPPOL_EXCLUDE_CARE_CLAIMS', 'int')) ? 1 : 0), 'chaine', 0, '', $conf->entity)) {
-		$error++;
-	}
-	if (!dolibarr_set_const($db, 'PEPPOL_EXCLUDE_SUBCONTRACTING', (string) (((int) GETPOST('PEPPOL_EXCLUDE_SUBCONTRACTING', 'int')) ? 1 : 0), 'chaine', 0, '', $conf->entity)) {
-		$error++;
-	}
+	// PEPPOL_EXCLUDE_MODELS and PEPPOL_EXCLUDE_CATEGORY (since 2.16.0): invoices that never go through Peppol. The one
+	// setting of 2.15.0 (PEPPOL_EXCLUDE_CARE_CLAIMS) is removed.
 	if (!dolibarr_set_const($db, 'PEPPOL_EXCLUDE_MODELS', implode(',', peppolExcludedModels(GETPOST('PEPPOL_EXCLUDE_MODELS', 'alphanohtml'))), 'chaine', 0, '', $conf->entity)) {
 		$error++;
 	}
+	$excludeCategory = GETPOSTINT('PEPPOL_EXCLUDE_CATEGORY');
+	$resqlCategory = $excludeCategory > 0 ? $db->query("SELECT rowid FROM " . MAIN_DB_PREFIX . "categorie WHERE rowid = " . ((int) $excludeCategory) . " AND type = 0 AND entity IN (" . getEntity('category') . ")") : false;
+	if (!dolibarr_set_const($db, 'PEPPOL_EXCLUDE_CATEGORY', (string) (($resqlCategory && $db->fetch_object($resqlCategory)) ? $excludeCategory : 0), 'chaine', 0, '', $conf->entity)) {
+		$error++;
+	}
+	dolibarr_del_const($db, 'PEPPOL_EXCLUDE_CARE_CLAIMS', $conf->entity);
+	dolibarr_del_const($db, 'PEPPOL_EXCLUDE_SUBCONTRACTING', $conf->entity);
 
 	// PEPPOL_EMBED_PDF (since 2.11.0): embed the PDF in the Peppol file, on by default
 	if (!dolibarr_set_const($db, 'PEPPOL_EMBED_PDF', (string) (((int) GETPOST('PEPPOL_EMBED_PDF', 'int')) ? 1 : 0), 'chaine', 0, '', $conf->entity)) {
@@ -322,28 +323,21 @@ if ($action == 'edit') {
 	print '</thead>';
 	print '<tbody>';
 
-	// PEPPOL_EXCLUDE_CARE_CLAIMS (since 2.15.0), PEPPOL_EXCLUDE_SUBCONTRACTING and PEPPOL_EXCLUDE_MODELS (since 2.16.0)
-	$exclusionDefault = peppolExclusionDefault();
-	$exclusionSettings = array(
-		'PEPPOL_EXCLUDE_CARE_CLAIMS' => getDolGlobalInt('PEPPOL_EXCLUDE_CARE_CLAIMS', $exclusionDefault),
-		'PEPPOL_EXCLUDE_SUBCONTRACTING' => getDolGlobalInt('PEPPOL_EXCLUDE_SUBCONTRACTING', getDolGlobalInt('PEPPOL_EXCLUDE_CARE_CLAIMS', $exclusionDefault)),
-	);
-	foreach ($exclusionSettings as $exclusionKey => $exclusionValue) {
-		print '<tr class="oddeven">';
-		print '<td><label for="' . $exclusionKey . '">' . $langs->trans($exclusionKey) . '</label>';
-		print '<br><span class="opacitymedium small">' . $langs->trans($exclusionKey . 'Tooltip') . '</span></td>';
-		print '<td>';
-		print '<select name="' . $exclusionKey . '" id="' . $exclusionKey . '" class="flat">';
-		print '<option value="1"' . ($exclusionValue === 1 ? ' selected' : '') . '>' . $langs->trans("Yes") . '</option>';
-		print '<option value="0"' . ($exclusionValue === 1 ? '' : ' selected') . '>' . $langs->trans("No") . '</option>';
-		print '</select>';
-		print '</td>';
-		print '</tr>';
-	}
+	// PEPPOL_EXCLUDE_MODELS and PEPPOL_EXCLUDE_CATEGORY (since 2.16.0)
 	print '<tr class="oddeven">';
 	print '<td><label for="PEPPOL_EXCLUDE_MODELS">' . $langs->trans("PEPPOL_EXCLUDE_MODELS") . '</label>';
 	print '<br><span class="opacitymedium small">' . $langs->trans("PEPPOL_EXCLUDE_MODELSTooltip") . '</span></td>';
 	print '<td><input type="text" name="PEPPOL_EXCLUDE_MODELS" id="PEPPOL_EXCLUDE_MODELS" class="flat minwidth200" value="' . dol_escape_htmltag(getDolGlobalString('PEPPOL_EXCLUDE_MODELS')) . '"></td>';
+	print '</tr>';
+	print '<tr class="oddeven">';
+	print '<td><label for="PEPPOL_EXCLUDE_CATEGORY">' . $langs->trans("PEPPOL_EXCLUDE_CATEGORY") . '</label>';
+	print '<br><span class="opacitymedium small">' . $langs->trans("PEPPOL_EXCLUDE_CATEGORYTooltip") . '</span></td>';
+	print '<td><select name="PEPPOL_EXCLUDE_CATEGORY" id="PEPPOL_EXCLUDE_CATEGORY" class="flat minwidth200"><option value="0">&nbsp;</option>';
+	$resqlCategories = $db->query("SELECT rowid, label FROM " . MAIN_DB_PREFIX . "categorie WHERE type = 0 AND entity IN (" . getEntity('category') . ") ORDER BY label LIMIT 500");
+	while ($resqlCategories && ($objCategory = $db->fetch_object($resqlCategories))) {
+		print '<option value="' . ((int) $objCategory->rowid) . '"' . (getDolGlobalInt('PEPPOL_EXCLUDE_CATEGORY') === (int) $objCategory->rowid ? ' selected' : '') . '>' . dol_escape_htmltag((string) $objCategory->label) . '</option>';
+	}
+	print '</select></td>';
 	print '</tr>';
 
 	// PEPPOL_EMBED_PDF (since 2.11.0)
@@ -453,18 +447,14 @@ if ($action == 'edit') {
 	print '</thead>';
 	print '<tbody>';
 
-	// PEPPOL_EXCLUDE_CARE_CLAIMS (since 2.15.0), PEPPOL_EXCLUDE_SUBCONTRACTING and PEPPOL_EXCLUDE_MODELS (since 2.16.0)
-	print '<tr class="oddeven">';
-	print '<td>' . $langs->trans("PEPPOL_EXCLUDE_CARE_CLAIMS") . '</td>';
-	print '<td>' . yn(getDolGlobalInt('PEPPOL_EXCLUDE_CARE_CLAIMS', peppolExclusionDefault())) . '</td>';
-	print '</tr>';
-	print '<tr class="oddeven">';
-	print '<td>' . $langs->trans("PEPPOL_EXCLUDE_SUBCONTRACTING") . '</td>';
-	print '<td>' . yn(getDolGlobalInt('PEPPOL_EXCLUDE_SUBCONTRACTING', getDolGlobalInt('PEPPOL_EXCLUDE_CARE_CLAIMS', peppolExclusionDefault()))) . '</td>';
-	print '</tr>';
+	// PEPPOL_EXCLUDE_MODELS and PEPPOL_EXCLUDE_CATEGORY (since 2.16.0)
 	print '<tr class="oddeven">';
 	print '<td>' . $langs->trans("PEPPOL_EXCLUDE_MODELS") . '</td>';
 	print '<td>' . dol_escape_htmltag(getDolGlobalString('PEPPOL_EXCLUDE_MODELS', '-')) . '</td>';
+	print '</tr>';
+	print '<tr class="oddeven">';
+	print '<td>' . $langs->trans("PEPPOL_EXCLUDE_CATEGORY") . '</td>';
+	print '<td>' . (getDolGlobalInt('PEPPOL_EXCLUDE_CATEGORY') > 0 ? (int) getDolGlobalInt('PEPPOL_EXCLUDE_CATEGORY') : '-') . '</td>';
 	print '</tr>';
 
 	// PEPPOL_EMBED_PDF (since 2.11.0)

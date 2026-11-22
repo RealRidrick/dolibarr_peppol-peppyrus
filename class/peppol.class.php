@@ -136,14 +136,14 @@ class Peppol
 			dol_syslog("peppol:: makePDF _invoice ref is not set, early return", LOG_WARNING);
 			return -2;
 		}
-		// Since 2.15.0: a care claim (ZVW, WLZ) or subcontracting invoice never goes through Peppol. No Peppol file, and
+		// Since 2.15.0: an excluded invoice (settings, since 2.16.0 general) never goes through Peppol. No Peppol file, and
 		// an earlier file is removed, so that it can not be sent by hand or by the scheduled job either.
 		if (peppolInvoiceIsExcluded($this->db, $objFacture)) {
 			$xmlFile = $conf->facture->dir_output . '/' . dol_sanitizeFileName($objFacture->ref) . '/' . dol_sanitizeFileName($objFacture->ref) . '_peppol.xml';
 			if (dol_is_file($xmlFile)) {
 				dol_delete_file($xmlFile, 0, 1);
 			}
-			dol_syslog("peppol:: makePDF invoice id=" . ((int) $objFacture->id) . " is a care claim or subcontracting invoice, no Peppol file");
+			dol_syslog("peppol:: makePDF invoice id=" . ((int) $objFacture->id) . " is excluded from Peppol by the setup, no Peppol file");
 			return 0;
 		}
 

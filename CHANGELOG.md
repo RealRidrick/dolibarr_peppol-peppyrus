@@ -2,15 +2,15 @@
 
 ## 2.16.0
 
-- **Invoices that never go through Peppol: three separate settings** instead of one, so the module also fits other countries and uses:
-  - *Never send care claims through Peppol* (`PEPPOL_EXCLUDE_CARE_CLAIMS`): template `onszorg_zvw` or a service of the funding stream ZVW or WLZ (module Ons-facturatie, Dutch home care);
-  - *Never send subcontracting invoices through Peppol* (`PEPPOL_EXCLUDE_SUBCONTRACTING`, new): template `onszorg_oa`;
-  - *Never send invoices with these PDF templates through Peppol* (`PEPPOL_EXCLUDE_MODELS`, new): a free list of PDF templates, for any country or use.
-- Default: the first two are on when the module Ons-facturatie is enabled, otherwise off (2.15.0 had them always on). An installation that already saved the setting of 2.15.0 keeps its choice, also for subcontracting.
-- The message when sending is refused now says which setting excludes the invoice.
+- **Invoices that never go through Peppol: general settings** instead of the rule of 2.15.0, which knew the templates and funding streams of one Dutch home care module. Now for every user and country:
+  - *Never send invoices with these PDF templates through Peppol* (`PEPPOL_EXCLUDE_MODELS`): a list of PDF templates;
+  - *Never send invoices with a product or service of this category through Peppol* (`PEPPOL_EXCLUDE_CATEGORY`): a product category.
+- Both are empty by default. The setting of 2.15.0 (`PEPPOL_EXCLUDE_CARE_CLAIMS`) is removed when the setup is saved; until then it has no effect any more.
+- The message when sending is refused says which setting excludes the invoice.
+- Tests: the tests of 2.14.2 (only the Peppol XML) and 2.15.0 (disclaimer) failed on Dolibarr 18 (no database and no hook manager in the unit tests); they use a stand-in now.
 - The hook class declares `$warnings` (Dolibarr empties it before every hook; without it PHP 8.2+ reports a deprecated dynamic property). The filter in `Peppolimport::fetchAll()` carries the reason for the security check of dolibarr-module on the line itself.
 
-**After updating:** flush memcached and restart PHP. The module does not need to be deactivated. Check the three settings in the setup of the module.
+**After updating:** flush memcached and restart PHP. The module does not need to be deactivated. Fill in the two settings in the setup of the module **before** the next automatic send if invoices must stay out of Peppol (2.15.0 excluded some by itself).
 
 ## 2.15.1
 
