@@ -469,6 +469,15 @@ class PeppolLibTest extends TestCase
 		$this->assertTrue(peppolIsCareClaim('', array(' ZVW ')));
 		$this->assertFalse(peppolIsCareClaim('crabe', array('WMO', 'PGB')));
 		$this->assertFalse(peppolIsCareClaim('onszorg_wmo', array()));
+		// Since 2.16.0: three separate settings
+		$this->assertSame('care', peppolExclusionReason('onszorg_zvw', array(), true, false, array()));
+		$this->assertSame('', peppolExclusionReason('onszorg_zvw', array(), false, true, array()));
+		$this->assertSame('sub', peppolExclusionReason('onszorg_oa', array(), false, true, array()));
+		$this->assertSame('', peppolExclusionReason('onszorg_oa', array(), true, false, array()));
+		$this->assertSame('care', peppolExclusionReason('crabe', array('wlz'), true, false, array()));
+		$this->assertSame('model', peppolExclusionReason('sponge', array(), false, false, array('crabe', 'sponge')));
+		$this->assertSame('', peppolExclusionReason('crabe', array('WMO'), true, true, array()));
+		$this->assertSame(array('crabe', 'sponge'), peppolExcludedModels(' crabe, sponge,crabe,,bad name;x '));
 	}
 
 	/**

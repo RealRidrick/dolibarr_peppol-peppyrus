@@ -575,11 +575,17 @@ PeppolDisclaimerNotAcceptedNotice = Peppol sending is disabled until an administ
 PeppolDisclaimerGoToSetup = Open the Peppol module setup
 
 # Since 2.15.0: care claims never through Peppol (module Ons-facturatie)
-PEPPOL_EXCLUDE_CARE_CLAIMS = Never send care claims and subcontracting invoices through Peppol
-PEPPOL_EXCLUDE_CARE_CLAIMSTooltip = Invoices with the template onszorg_zvw or onszorg_oa, or with a service of the funding stream ZVW or WLZ (module Ons-facturatie), get no Peppol file and are never sent. They contain health data and go through Vecozo.
-PeppolCareClaimNever = This is a care claim (ZVW or WLZ, through Vecozo) or a subcontracting invoice. It is not sent through Peppol.
+PEPPOL_EXCLUDE_CARE_CLAIMS = Never send care claims through Peppol
+PEPPOL_EXCLUDE_CARE_CLAIMSTooltip = For Dutch home care with the module Ons-facturatie: invoices with the template onszorg_zvw, or with a service of the funding stream ZVW or WLZ, get no Peppol file and are never sent. They contain health data and go through Vecozo. Default: on when Ons-facturatie is enabled, otherwise off.
+PeppolCareClaimNever = This is a care claim (ZVW or WLZ, through Vecozo). By the setting it is not sent through Peppol.
 # Since 2.15.0: approval per supplier
 PeppolIrApproval = Approval via Peppol
 PeppolIrApprovalAan = Always send
 PeppolIrApprovalUit = Never send
 PeppolIrApprovalTooltip = Send an approval (Invoice Response) through Peppol to this supplier when an incoming invoice is booked. Empty follows the setting of the Peppol module. Only sent when the supplier can receive it.
+PEPPOL_EXCLUDE_SUBCONTRACTING = Never send subcontracting invoices through Peppol
+PEPPOL_EXCLUDE_SUBCONTRACTINGTooltip = Invoices with the template onszorg_oa (subcontracting, module Ons-facturatie) get no Peppol file and are never sent. Default: as the setting for care claims.
+PEPPOL_EXCLUDE_MODELS = Never send invoices with these PDF templates through Peppol
+PEPPOL_EXCLUDE_MODELSTooltip = Names of PDF templates of invoices, separated by commas (for example crabe,sponge). For any country or use: an invoice with one of these templates gets no Peppol file and is never sent. Empty: none.
+PeppolSubcontractingNever = This is a subcontracting invoice. By the setting it is not sent through Peppol.
+PeppolModelNever = The PDF template of this invoice is in the list of templates that never go through Peppol (setup of the module).

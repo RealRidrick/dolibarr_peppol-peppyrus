@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.16.0
+
+- **Invoices that never go through Peppol: three separate settings** instead of one, so the module also fits other countries and uses:
+  - *Never send care claims through Peppol* (`PEPPOL_EXCLUDE_CARE_CLAIMS`): template `onszorg_zvw` or a service of the funding stream ZVW or WLZ (module Ons-facturatie, Dutch home care);
+  - *Never send subcontracting invoices through Peppol* (`PEPPOL_EXCLUDE_SUBCONTRACTING`, new): template `onszorg_oa`;
+  - *Never send invoices with these PDF templates through Peppol* (`PEPPOL_EXCLUDE_MODELS`, new): a free list of PDF templates, for any country or use.
+- Default: the first two are on when the module Ons-facturatie is enabled, otherwise off (2.15.0 had them always on). An installation that already saved the setting of 2.15.0 keeps its choice, also for subcontracting.
+- The message when sending is refused now says which setting excludes the invoice.
+- The hook class declares `$warnings` (Dolibarr empties it before every hook; without it PHP 8.2+ reports a deprecated dynamic property). The filter in `Peppolimport::fetchAll()` carries the reason for the security check of dolibarr-module on the line itself.
+
+**After updating:** flush memcached and restart PHP. The module does not need to be deactivated. Check the three settings in the setup of the module.
+
 ## 2.15.1
 
 - **Peppol tab of an invoice** (`peppol_tab.php`): the module and the right "Peppol: read" are now checked first, then the invoice must exist and be accessible (`restrictedArea()`, which also checks the entity), and only then is anything of it loaded. Before, the invoice and its third party were loaded before these checks, and an unknown id gave a PHP fatal error (`fetch_optionals()` on null) instead of "access denied". No data was shown. Found with a test that opens every page with ids of another company.

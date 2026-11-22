@@ -100,8 +100,15 @@ if ($action == 'update' && !empty($user->admin)) {
 		$error++;
 	}
 
-	// PEPPOL_EXCLUDE_CARE_CLAIMS (since 2.15.0): care claims and subcontracting never through Peppol, on by default
+	// PEPPOL_EXCLUDE_CARE_CLAIMS (since 2.15.0), PEPPOL_EXCLUDE_SUBCONTRACTING and PEPPOL_EXCLUDE_MODELS (since 2.16.0):
+	// invoices that never go through Peppol, each on its own
 	if (!dolibarr_set_const($db, 'PEPPOL_EXCLUDE_CARE_CLAIMS', (string) (((int) GETPOST('PEPPOL_EXCLUDE_CARE_CLAIMS', 'int')) ? 1 : 0), 'chaine', 0, '', $conf->entity)) {
+		$error++;
+	}
+	if (!dolibarr_set_const($db, 'PEPPOL_EXCLUDE_SUBCONTRACTING', (string) (((int) GETPOST('PEPPOL_EXCLUDE_SUBCONTRACTING', 'int')) ? 1 : 0), 'chaine', 0, '', $conf->entity)) {
+		$error++;
+	}
+	if (!dolibarr_set_const($db, 'PEPPOL_EXCLUDE_MODELS', implode(',', peppolExcludedModels(GETPOST('PEPPOL_EXCLUDE_MODELS', 'alphanohtml'))), 'chaine', 0, '', $conf->entity)) {
 		$error++;
 	}
 
@@ -315,16 +322,28 @@ if ($action == 'edit') {
 	print '</thead>';
 	print '<tbody>';
 
-	// PEPPOL_EXCLUDE_CARE_CLAIMS (since 2.15.0)
+	// PEPPOL_EXCLUDE_CARE_CLAIMS (since 2.15.0), PEPPOL_EXCLUDE_SUBCONTRACTING and PEPPOL_EXCLUDE_MODELS (since 2.16.0)
+	$exclusionDefault = peppolExclusionDefault();
+	$exclusionSettings = array(
+		'PEPPOL_EXCLUDE_CARE_CLAIMS' => getDolGlobalInt('PEPPOL_EXCLUDE_CARE_CLAIMS', $exclusionDefault),
+		'PEPPOL_EXCLUDE_SUBCONTRACTING' => getDolGlobalInt('PEPPOL_EXCLUDE_SUBCONTRACTING', getDolGlobalInt('PEPPOL_EXCLUDE_CARE_CLAIMS', $exclusionDefault)),
+	);
+	foreach ($exclusionSettings as $exclusionKey => $exclusionValue) {
+		print '<tr class="oddeven">';
+		print '<td><label for="' . $exclusionKey . '">' . $langs->trans($exclusionKey) . '</label>';
+		print '<br><span class="opacitymedium small">' . $langs->trans($exclusionKey . 'Tooltip') . '</span></td>';
+		print '<td>';
+		print '<select name="' . $exclusionKey . '" id="' . $exclusionKey . '" class="flat">';
+		print '<option value="1"' . ($exclusionValue === 1 ? ' selected' : '') . '>' . $langs->trans("Yes") . '</option>';
+		print '<option value="0"' . ($exclusionValue === 1 ? '' : ' selected') . '>' . $langs->trans("No") . '</option>';
+		print '</select>';
+		print '</td>';
+		print '</tr>';
+	}
 	print '<tr class="oddeven">';
-	print '<td><label for="PEPPOL_EXCLUDE_CARE_CLAIMS">' . $langs->trans("PEPPOL_EXCLUDE_CARE_CLAIMS") . '</label>';
-	print '<br><span class="opacitymedium small">' . $langs->trans("PEPPOL_EXCLUDE_CARE_CLAIMSTooltip") . '</span></td>';
-	print '<td>';
-	print '<select name="PEPPOL_EXCLUDE_CARE_CLAIMS" id="PEPPOL_EXCLUDE_CARE_CLAIMS" class="flat">';
-	print '<option value="1"' . (getDolGlobalInt('PEPPOL_EXCLUDE_CARE_CLAIMS', 1) === 1 ? ' selected' : '') . '>' . $langs->trans("Yes") . '</option>';
-	print '<option value="0"' . (getDolGlobalInt('PEPPOL_EXCLUDE_CARE_CLAIMS', 1) === 1 ? '' : ' selected') . '>' . $langs->trans("No") . '</option>';
-	print '</select>';
-	print '</td>';
+	print '<td><label for="PEPPOL_EXCLUDE_MODELS">' . $langs->trans("PEPPOL_EXCLUDE_MODELS") . '</label>';
+	print '<br><span class="opacitymedium small">' . $langs->trans("PEPPOL_EXCLUDE_MODELSTooltip") . '</span></td>';
+	print '<td><input type="text" name="PEPPOL_EXCLUDE_MODELS" id="PEPPOL_EXCLUDE_MODELS" class="flat minwidth200" value="' . dol_escape_htmltag(getDolGlobalString('PEPPOL_EXCLUDE_MODELS')) . '"></td>';
 	print '</tr>';
 
 	// PEPPOL_EMBED_PDF (since 2.11.0)
@@ -434,10 +453,18 @@ if ($action == 'edit') {
 	print '</thead>';
 	print '<tbody>';
 
-	// PEPPOL_EXCLUDE_CARE_CLAIMS (since 2.15.0)
+	// PEPPOL_EXCLUDE_CARE_CLAIMS (since 2.15.0), PEPPOL_EXCLUDE_SUBCONTRACTING and PEPPOL_EXCLUDE_MODELS (since 2.16.0)
 	print '<tr class="oddeven">';
 	print '<td>' . $langs->trans("PEPPOL_EXCLUDE_CARE_CLAIMS") . '</td>';
-	print '<td>' . yn(getDolGlobalInt('PEPPOL_EXCLUDE_CARE_CLAIMS', 1)) . '</td>';
+	print '<td>' . yn(getDolGlobalInt('PEPPOL_EXCLUDE_CARE_CLAIMS', peppolExclusionDefault())) . '</td>';
+	print '</tr>';
+	print '<tr class="oddeven">';
+	print '<td>' . $langs->trans("PEPPOL_EXCLUDE_SUBCONTRACTING") . '</td>';
+	print '<td>' . yn(getDolGlobalInt('PEPPOL_EXCLUDE_SUBCONTRACTING', getDolGlobalInt('PEPPOL_EXCLUDE_CARE_CLAIMS', peppolExclusionDefault()))) . '</td>';
+	print '</tr>';
+	print '<tr class="oddeven">';
+	print '<td>' . $langs->trans("PEPPOL_EXCLUDE_MODELS") . '</td>';
+	print '<td>' . dol_escape_htmltag(getDolGlobalString('PEPPOL_EXCLUDE_MODELS', '-')) . '</td>';
 	print '</tr>';
 
 	// PEPPOL_EMBED_PDF (since 2.11.0)

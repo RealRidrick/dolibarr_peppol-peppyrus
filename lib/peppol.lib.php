@@ -552,45 +552,104 @@ function peppolDisclaimerAccept($db, $user)
 }
 
 /**
- * Invoice that never goes through Peppol (since 2.15.0, setting PEPPOL_EXCLUDE_CARE_CLAIMS, on by default):
- * - invoice template onszorg_zvw of the module Ons-facturatie: a care claim (ZVW, WLZ), sent through Vecozo;
- * - invoice template onszorg_oa: subcontracting;
- * - a line with a service of the funding stream ZVW or WLZ (module Ons-facturatie).
- * Such invoices contain health data and have their own channel.
+ * Default of the exclusion settings (since 2.16.0): on when the module Ons-facturatie (Dutch home care) is enabled,
+ * off otherwise. Elsewhere care claims and subcontracting are not known by template, so nothing is excluded unless
+ * the administrator chooses so.
+ *
+ * @return int 1 or 0
+ */
+function peppolExclusionDefault()
+{
+	return isModEnabled('onsfacturatie') ? 1 : 0;
+}
+
+/**
+ * Why an invoice never goes through Peppol (since 2.16.0, three separate settings; 2.15.0 had one):
+ * - care claims (PEPPOL_EXCLUDE_CARE_CLAIMS): template onszorg_zvw, or a line with a service of the funding stream ZVW
+ *   or WLZ (module Ons-facturatie). They contain health data and have their own channel (Vecozo in the Netherlands);
+ * - subcontracting (PEPPOL_EXCLUDE_SUBCONTRACTING): template onszorg_oa;
+ * - other templates (PEPPOL_EXCLUDE_MODELS): any PDF template in the list, for every country and use.
  *
  * @param string   $model  model_pdf of the invoice
  * @param string[] $flows  Funding streams of the lines (ZVW, WLZ, WMO, ...)
+ * @param bool     $care   Care claims excluded
+ * @param bool     $sub    Subcontracting excluded
+ * @param string[] $models Other excluded PDF templates
+ * @return string 'care', 'sub', 'model' or '' (may go through Peppol)
+ */
+function peppolExclusionReason($model, $flows, $care, $sub, $models)
+{
+	$model = trim((string) $model);
+	if ($care) {
+		if ($model === 'onszorg_zvw') {
+			return 'care';
+		}
+		foreach ($flows as $flow) {
+			if (in_array(strtoupper(trim((string) $flow)), array('ZVW', 'WLZ'), true)) {
+				return 'care';
+			}
+		}
+	}
+	if ($sub && $model === 'onszorg_oa') {
+		return 'sub';
+	}
+	if ($model !== '' && in_array($model, $models, true)) {
+		return 'model';
+	}
+	return '';
+}
+
+/**
+ * The list of other excluded PDF templates from the setting (comma separated, only letters, digits, - and _)
+ *
+ * @param string $value Setting PEPPOL_EXCLUDE_MODELS
+ * @return string[]
+ */
+function peppolExcludedModels($value)
+{
+	$out = array();
+	foreach (explode(',', (string) $value) as $model) {
+		$model = trim($model);
+		if ($model !== '' && preg_match('/^[A-Za-z0-9_-]{1,64}$/', $model)) {
+			$out[$model] = $model;
+		}
+	}
+	return array_values($out);
+}
+
+/**
+ * Invoice that never goes through Peppol, as one rule (kept for compatibility, since 2.15.0): care claim or
+ * subcontracting, both settings on
+ *
+ * @param string   $model  model_pdf of the invoice
+ * @param string[] $flows  Funding streams of the lines
  * @return bool
  */
 function peppolIsCareClaim($model, $flows)
 {
-	if (in_array((string) $model, array('onszorg_zvw', 'onszorg_oa'), true)) {
-		return true;
-	}
-	foreach ($flows as $flow) {
-		if (in_array(strtoupper(trim((string) $flow)), array('ZVW', 'WLZ'), true)) {
-			return true;
-		}
-	}
-	return false;
+	return peppolExclusionReason($model, $flows, true, true, array()) !== '';
 }
 
 /**
- * Is this invoice excluded from Peppol (since 2.15.0)? Reads the funding streams of the lines from the services of
- * the module Ons-facturatie when it is enabled; no hard dependency.
+ * Why this invoice is excluded from Peppol (since 2.16.0), from the three settings. Reads the funding streams of the
+ * lines from the services of the module Ons-facturatie when it is enabled; no hard dependency.
  *
  * @param DoliDB   $db      Database
  * @param \Facture $facture Invoice
- * @return bool
+ * @return string 'care', 'sub', 'model' or ''
  */
-function peppolInvoiceIsExcluded($db, $facture)
+function peppolInvoiceExclusion($db, $facture)
 {
 	global $conf;
-	if (!getDolGlobalInt('PEPPOL_EXCLUDE_CARE_CLAIMS', 1)) {
-		return false;
+	$care = (bool) getDolGlobalInt('PEPPOL_EXCLUDE_CARE_CLAIMS', peppolExclusionDefault());
+	// Not set yet: follow the one setting of 2.15.0, so an existing installation keeps its behaviour
+	$sub = (bool) getDolGlobalInt('PEPPOL_EXCLUDE_SUBCONTRACTING', getDolGlobalInt('PEPPOL_EXCLUDE_CARE_CLAIMS', peppolExclusionDefault()));
+	$models = peppolExcludedModels(getDolGlobalString('PEPPOL_EXCLUDE_MODELS'));
+	if (!$care && !$sub && empty($models)) {
+		return '';
 	}
 	$flows = array();
-	if (isModEnabled('onsfacturatie') && (int) $facture->id > 0) {
+	if ($care && isModEnabled('onsfacturatie') && (int) $facture->id > 0) {
 		$sql = "SELECT DISTINCT p.stroom FROM " . MAIN_DB_PREFIX . "facturedet AS d";
 		$sql .= " INNER JOIN " . MAIN_DB_PREFIX . "onsfacturatie_prestatie AS p ON p.fk_product = d.fk_product AND p.entity = " . ((int) $conf->entity);
 		$sql .= " WHERE d.fk_facture = " . ((int) $facture->id) . " AND d.fk_product > 0";
@@ -602,7 +661,19 @@ function peppolInvoiceIsExcluded($db, $facture)
 			$db->free($resql);
 		}
 	}
-	return peppolIsCareClaim((string) $facture->model_pdf, $flows);
+	return peppolExclusionReason((string) $facture->model_pdf, $flows, $care, $sub, $models);
+}
+
+/**
+ * Is this invoice excluded from Peppol (since 2.15.0)? See peppolInvoiceExclusion().
+ *
+ * @param DoliDB   $db      Database
+ * @param \Facture $facture Invoice
+ * @return bool
+ */
+function peppolInvoiceIsExcluded($db, $facture)
+{
+	return peppolInvoiceExclusion($db, $facture) !== '';
 }
 
 /**
