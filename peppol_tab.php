@@ -95,28 +95,30 @@ $ref = GETPOST('ref', 'alpha');
 $socid = GETPOST('socid', 'int');
 $action = GETPOST('action', 'aZ09');
 
+// Security check first: module and right, then the invoice must exist and be accessible (restrictedArea also
+// checks the entity) before anything of it is loaded (since 2.15.1)
+if (!isModEnabled('peppolpeppyrus') || !$user->hasRight('peppolpeppyrus', 'read')) {
+	accessforbidden();
+}
 $object = new Facture($db);
 $res = 0;
 // Load object
 if ($id > 0 || !empty($ref)) {
 	$res = $object->fetch($id, $ref, '', '', getDolGlobalInt('INVOICE_USE_SITUATION'));
 }
-if ($res < 0) {
+if ($res <= 0) {
+	// Unknown or no invoice: no error page with a PHP fatal error (since 2.15.1)
 	accessforbidden();
 }
-$peppol = new Peppol($db, $object);
 
-// Security check
 $socid = 0;
 if ($user->socid) {
 	$socid = $user->socid;
 }
 $hookmanager->initHooks(array('invoicepeppol'));
 
-if (!isModEnabled('peppolpeppyrus') || !$user->hasRight('peppolpeppyrus', 'read')) {
-	accessforbidden();
-}
 $result = restrictedArea($user, 'facture', $object->id, '');
+$peppol = new Peppol($db, $object);
 
 $usercancreate = $user->hasRight("facture", "creer");
 

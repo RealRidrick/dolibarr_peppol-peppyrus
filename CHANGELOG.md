@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.15.1
+
+- **Peppol tab of an invoice** (`peppol_tab.php`): the module and the right "Peppol: read" are now checked first, then the invoice must exist and be accessible (`restrictedArea()`, which also checks the entity), and only then is anything of it loaded. Before, the invoice and its third party were loaded before these checks, and an unknown id gave a PHP fatal error (`fetch_optionals()` on null) instead of "access denied". No data was shown. Found with a test that opens every page with ids of another company.
+
+**After updating:** flush memcached and restart PHP. The module does not need to be deactivated.
+
 ## 2.15.0
 
 - **Care claims never through Peppol** (new setting *Never send care claims and subcontracting invoices through Peppol*, on by default). Invoices with the template `onszorg_zvw` or `onszorg_oa`, or with a service of the funding stream ZVW or WLZ (module Ons-facturatie), get no Peppol file and are refused when sent by hand or by the scheduled job. They contain health data and go through Vecozo. Without the module Ons-facturatie nothing changes.
